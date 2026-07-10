@@ -64,6 +64,32 @@ Hidden-Electron-import discipline: the Phase-1 exit test is *headless boot*,
 which flushes out every offender; each one gets the `SecretStore` treatment
 (small interface, two impls) rather than a conditional import.
 
+### 2a. Terminal-cluster findings (scouted 2026-07-10 — read before moving it)
+
+The daemon is *not* import-clean; the surface alias-grep undercounts because
+it uses relative imports:
+
+- `terminal-host/session.ts` imports `../lib/terminal/env` (**buildSafeEnv**,
+  ~700-line env builder + tests) and `../lib/agent-setup/shell-wrappers`
+  (**getShellArgs**) — the daemon drags the env-builder + shell-wrapper
+  subtree with it. Map their transitive deps before the move.
+- `lib/terminal-host/client.ts` imports **`{ app } from "electron"`** — needs
+  a tiny shim/injection (likely app-lifecycle or path use) before it can move.
+- `lib/terminal/index.ts` imports `getProviderKey` (safeStorage) → inject a
+  provider-key lookup instead (SecretStore seam).
+- `lib/terminal/daemon/daemon-manager.ts` + `dev-reset.ts` import `appState`
+  (lowdb UI-state store, drags shared/hotkeys+tabs+themes) → inject the one
+  or two values they actually read.
+- Everything else the daemon+client touch (`constants`, `env.shared`,
+  `app-environment`, `terminal-history`, `tree-kill`,
+  `terminal-escape-filter`) is **already in server-core** — shims resolve.
+
+Suggested order: (1) extract `terminal/env.ts` + `agent-setup/shell-wrappers`
+subtree, (2) de-electronify `client.ts` + the three injection points,
+(3) move daemon+client wholesale, (4) repoint the two electron-vite entries
+(`terminal-host`, `pty-subprocess`) at the package source, (5) named pipe
+(D6) in the moved daemon.
+
 ## 3. Split the router tree (`apps/desktop/src/lib/trpc/routers/`)
 
 | Router | Side | Notes |
