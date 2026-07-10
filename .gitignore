@@ -78,6 +78,13 @@ apps/streams/data/
 Caddyfile
 superset-dev-data/
 
+# Graphify: track the graph itself (graph.json, manifest.json, GRAPH_REPORT.md,
+# graph.html) so it persists across machines; ignore regenerable cache + run costs
+**/graphify-out/cache/
+**/graphify-out/cost.json
+**/graphify-out/.graphify_detect.err
+**/graphify-out/.graphify_python
+
 # Codex workspace config (track only shared config/symlinks; ignore runtime state)
 .codex/*
 !.codex/config.toml
