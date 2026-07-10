@@ -1,8 +1,5 @@
 import { EventEmitter } from "node:events";
-import { workspaces } from "@superset/local-db";
-import { track } from "main/lib/analytics";
-import { appState } from "main/lib/app-state";
-import { localDb } from "main/lib/local-db";
+import { getTerminalManagerHooks } from "../host-hooks";
 import { HistoryReader, truncateUtf8ToLastBytes } from "../../terminal-history";
 import {
 	disposeTerminalHostClient,
@@ -89,17 +86,15 @@ export class DaemonTerminalManager extends EventEmitter {
 				`[DaemonTerminalManager] Found ${response.sessions.length} sessions from previous run`,
 			);
 
-			const validWorkspaceIds = new Set(
-				localDb
-					.select({ id: workspaces.id })
-					.from(workspaces)
-					.all()
-					.map((w) => w.id),
-			);
+			// null = host can't enumerate workspaces (e.g. no DB yet) — SKIP
+			// cleanup rather than treating every session as orphaned.
+			const workspaceIds = getTerminalManagerHooks().listWorkspaceIds();
+			const validWorkspaceIds =
+				workspaceIds === null ? null : new Set(workspaceIds);
 
 			let orphanedCount = 0;
 			for (const session of response.sessions) {
-				if (!validWorkspaceIds.has(session.workspaceId)) {
+				if (validWorkspaceIds && !validWorkspaceIds.has(session.workspaceId)) {
 					console.log(
 						`[DaemonTerminalManager] Killing orphaned session ${session.sessionId} (workspace deleted)`,
 					);
@@ -113,7 +108,9 @@ export class DaemonTerminalManager extends EventEmitter {
 			// applies when the daemon does not have a session).
 			const preservedSessions = response.sessions.filter(
 				(session) =>
-					validWorkspaceIds.has(session.workspaceId) && session.isAlive,
+					(validWorkspaceIds === null ||
+						validWorkspaceIds.has(session.workspaceId)) &&
+					session.isAlive,
 			);
 			this.daemonAliveSessionIds = new Set(
 				preservedSessions.map((session) => session.sessionId),
@@ -219,7 +216,7 @@ export class DaemonTerminalManager extends EventEmitter {
 			const activeSessionCount = Array.from(this.sessions.values()).filter(
 				(s) => s.isAlive,
 			).length;
-			track("terminal_daemon_disconnected", {
+			getTerminalManagerHooks().track("terminal_daemon_disconnected", {
 				active_session_count: activeSessionCount,
 			});
 			this.daemonAliveSessionIds.clear();
@@ -461,7 +458,7 @@ export class DaemonTerminalManager extends EventEmitter {
 			}
 
 			if (response.wasRecovered) {
-				track("terminal_warm_attached", {
+				getTerminalManagerHooks().track("terminal_warm_attached", {
 					workspace_id: workspaceId,
 					pane_id: paneId,
 					snapshot_bytes: response.snapshot.snapshotAnsi
@@ -553,7 +550,7 @@ export class DaemonTerminalManager extends EventEmitter {
 			rows: metadata.rows || rows,
 		});
 
-		track("terminal_cold_restored", {
+		getTerminalManagerHooks().track("terminal_cold_restored", {
 			workspace_id: workspaceId,
 			pane_id: paneId,
 			scrollback_bytes: scrollbackBytes,
@@ -614,10 +611,10 @@ export class DaemonTerminalManager extends EventEmitter {
 
 	private getCreateOrAttachPriority(params: CreateSessionParams): number {
 		try {
-			const tabsState = appState.data?.tabsState;
-			const activeTabId = tabsState?.activeTabIds?.[params.workspaceId];
+			const focusState = getTerminalManagerHooks().getFocusState();
+			const activeTabId = focusState?.activeTabIds?.[params.workspaceId];
 			const focusedPaneId =
-				activeTabId && tabsState?.focusedPaneIds?.[activeTabId];
+				activeTabId && focusState?.focusedPaneIds?.[activeTabId];
 
 			const isActiveFocusedPane =
 				activeTabId === params.tabId && focusedPaneId === params.paneId;

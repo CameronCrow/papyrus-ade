@@ -5,6 +5,18 @@
 	"private": true,
 	"type": "module",
 	"exports": {
+		"./terminal": {
+			"types": "./src/terminal/index.ts",
+			"default": "./src/terminal/index.ts"
+		},
+		"./terminal/daemon": {
+			"types": "./src/terminal/daemon/index.ts",
+			"default": "./src/terminal/daemon/index.ts"
+		},
+		"./workspace-runtime": {
+			"types": "./src/workspace-runtime/index.ts",
+			"default": "./src/workspace-runtime/index.ts"
+		},
 		"./*": {
 			"types": "./src/*.ts",
 			"default": "./src/*.ts"
@@ -22,6 +34,7 @@
 		"@xterm/headless": "6.1.0-beta.148",
 		"default-shell": "^2.2.0",
 		"node-pty": "1.1.0",
+		"pidtree": "^0.6.0",
 		"tree-kill": "^1.2.2",
 		"zod": "^4.3.5"
 	},

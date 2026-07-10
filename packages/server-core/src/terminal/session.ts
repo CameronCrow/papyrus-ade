@@ -1,9 +1,9 @@
 import os from "node:os";
-import "../../terminal-host/xterm-env-polyfill";
+import "../terminal-host/xterm-env-polyfill";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Terminal as HeadlessTerminal } from "@xterm/headless";
 import * as pty from "node-pty";
-import { getShellArgs } from "../agent-setup";
+import { getShellArgs } from "../agent-setup/shell-wrappers";
 import { DataBatcher } from "../data-batcher";
 import {
 	containsClearScrollbackSequence,

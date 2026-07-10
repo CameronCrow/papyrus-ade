@@ -35,28 +35,14 @@ mock.module("../../terminal-host/client", () => ({
 	disposeTerminalHostClient: () => {},
 }));
 
-mock.module("main/lib/analytics", () => ({
+// Analytics/UI-state/DB are host-app hooks now (host-hooks.ts), not module
+// imports — register no-op fakes instead of mock.module.
+const { setTerminalManagerHooks } = await import("../host-hooks");
+setTerminalManagerHooks({
 	track: () => {},
-}));
-
-mock.module("main/lib/app-state", () => ({
-	appState: { data: null },
-}));
-
-mock.module("main/lib/local-db", () => ({
-	localDb: {
-		select: () => ({
-			from: () => ({
-				all: () => [],
-				get: () => undefined,
-			}),
-		}),
-	},
-}));
-
-mock.module("@superset/local-db", () => ({
-	workspaces: { id: "id" },
-}));
+	getFocusState: () => undefined,
+	listWorkspaceIds: () => [],
+});
 
 const { DaemonTerminalManager } = await import("./daemon-manager");
 
