@@ -90,3 +90,6 @@ superset-dev-data/
 !.codex/config.toml
 !.codex/commands
 !.codex/prompts
+
+# papyrus-server build output (migrations copied from packages/local-db at build time)
+apps/server/resources/
