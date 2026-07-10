@@ -12,7 +12,13 @@ import { authedProcedure, router } from "../trpc";
 // The daemon runs under plain Node from a CJS bundle (scripts/build-daemon.ts):
 // node-pty's ConPTY conin socket breaks under a bun-run daemon on Windows,
 // and the bundle inlines the xterm window polyfill + erases TS enums.
-const daemonBundle = join(import.meta.dirname, "..", "..", "dist", "terminal-host.cjs");
+// The server always runs from its CJS bundle (bun cannot load better-sqlite3
+// or drive node-pty on Windows), where the daemon bundle sits alongside it in
+// dist/. The import.meta branch covers source-mode typecheck/tooling.
+const daemonBundle =
+	typeof __dirname !== "undefined"
+		? join(__dirname, "terminal-host.cjs")
+		: join(import.meta.dirname, "..", "..", "dist", "terminal-host.cjs");
 
 setDaemonScriptPathResolver(() => {
 	if (!existsSync(daemonBundle)) {

@@ -5,15 +5,18 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build:daemon": "bun run scripts/build-daemon.ts",
-		"dev": "bun run build:daemon && bun run src/cli.ts serve",
-		"start": "node --experimental-strip-types src/cli.ts serve",
+		"build": "bun run scripts/build.ts",
+		"build:daemon": "bun run scripts/build.ts",
+		"dev": "bun run build && node dist/server.cjs serve",
+		"start": "node dist/server.cjs serve",
 		"typecheck": "tsc --noEmit",
 		"test": "bun test"
 	},
 	"dependencies": {
 		"@papyrus/server-core": "workspace:*",
+		"@superset/local-db": "workspace:*",
 		"@trpc/server": "^11.7.1",
+		"better-sqlite3": "12.6.2",
 		"node-pty": "1.1.0",
 		"superjson": "^2.2.5",
 		"ws": "^8.18.0",

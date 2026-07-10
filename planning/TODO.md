@@ -19,12 +19,12 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
   - [x] Agent cluster: `agent-*` modules (init/repo/scaffold/worktree/memory-backfill/config/setup), `local-db` (host-hooks for migrations dir + fatal dialog), `workspace-init-manager`, `feature-flags`, `user-profile` (223/223 pkg tests green on Windows)
   - [ ] Still desktop-side (Electron-bound or pending): `provider-keys` (awaits SecretStore wiring), `app-state`, `analytics`, `static-ports`, `resource-metrics`, `sync`, `scheduler`, `sanitize`, `project-icons`, shell modules
 - [x] `SecretStore` interface + file-key impl (AES-256-GCM, 6 tests); safeStorage impl wires up when provider-keys moves
-- [ ] Split routers: core (workspaces, projects, terminal, filesystem, changes, config, settings, ports, sync, cache, utils, resource-metrics, browser-history) vs shell (window, menu, hotkeys, auto-update, permissions, ringtone, notifications, external, browser)
+- [~] Split routers: server exposes `agents` (categories+agents+init progress), `terminal`, `health` as thin shells over server-core (option b per PHASE_1 §2b — isolated linker forbids sharing one t across packages). Remaining core routers (filesystem, changes, config, settings, ports, sync, cache, utils, resource-metrics, browser-history) land as Phase 2 needs them
 - [ ] Serve core routers over HTTP + WS (tRPC v11, superjson, observables) — transport layer DONE (health router proves HTTP query + WS observable subscription); core routers land with the server-core extraction
 - [x] Bearer-token auth middleware; token minted to `~/.papyrus/token` on first run (constant-time compare; WS verified at upgrade)
-- [ ] Windows: named pipe for terminal-host, guard chmod, verify better-sqlite3 + git worktrees
-- [ ] Desktop app consumes server-core in-process (stays green)
-- [ ] Headless smoke test: create agent → spawn session → stream bytes (Win + mac)
+- [x] Windows: named pipe for terminal-host, chmod guards, better-sqlite3 (prebuild) + agent git repos verified. NOTE: server + daemon MUST run under Node — bun cannot load better-sqlite3 on Windows and breaks node-pty's conin socket; both ship as esbuild CJS bundles (`apps/server/scripts/build.ts`)
+- [x] Desktop app consumes server-core in-process via shims (typecheck + full compile green after every extraction wave)
+- [x] Headless smoke test on Windows: auth (HTTP+WS) → terminal over named pipe → create category → create agent (repo + memory scaffold) → terminal streamed from inside the agent worktree → SMOKE OK (`apps/server/scripts/smoke.ts`); macOS run still pending
 
 ## Phase 2 — apps/webui (browser client) ([PHASE_2.md](PHASE_2.md))
 - [ ] Scaffold `apps/webui` (Vite SPA) seeded from desktop renderer

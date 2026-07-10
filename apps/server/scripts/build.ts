@@ -39,3 +39,29 @@ await build({
 });
 
 console.log("daemon bundles written to", outDir);
+
+// Server bundle: same constraints as the daemon (node-pty + better-sqlite3
+// are unusable under bun on Windows), so papyrus-server itself ships as a
+// CJS bundle run by Node.
+await build({
+	...common,
+	entryPoints: [join(import.meta.dirname, "..", "src", "cli.ts")],
+	external: ["node-pty", "better-sqlite3"],
+	outfile: join(outDir, "server.cjs"),
+});
+
+// local-db resolves migrations from <bundle>/../resources/migrations.
+const { cpSync } = await import("node:fs");
+const migrationsSrc = join(
+	import.meta.dirname,
+	"..",
+	"..",
+	"..",
+	"packages",
+	"local-db",
+	"drizzle",
+);
+cpSync(migrationsSrc, join(outDir, "..", "resources", "migrations"), {
+	recursive: true,
+});
+console.log("server bundle + migrations ready");

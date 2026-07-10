@@ -135,6 +135,82 @@ async function main() {
 
 	await client(true).terminal.kill.mutate({ paneId });
 	console.log("ok: terminal session killed");
+
+	// 6. Agent lifecycle: category -> agent (repo + memory scaffold in the
+	// background) -> terminal session inside the agent's worktree. This is the
+	// Phase-1 exit criterion end-to-end.
+	const category = await client(true).agents.createCategory.mutate({
+		name: `smoke-cat-${Date.now()}`,
+	});
+	console.log(`ok: category created (${category.id.slice(0, 8)})`);
+
+	const created = await client(true).agents.createAgent.mutate({
+		projectId: category.id,
+		name: "smoke-agent",
+		runtime: "claude",
+		repo: { type: "init" },
+	});
+	console.log(`ok: agent created, init started (${created.worktreePath})`);
+
+	// Poll the background init until the job clears or reports done/error.
+	const deadline = Date.now() + 120_000;
+	for (;;) {
+		const progress = await client(true).agents.initProgress.query({
+			agentId: created.workspace.id,
+		});
+		if (!progress || progress.step === "ready") break;
+		if (progress.error || progress.step === "failed") {
+			throw new Error(`agent init failed: ${progress.error ?? progress.step}`);
+		}
+		if (Date.now() > deadline) {
+			throw new Error(`agent init timed out at step ${progress.step}`);
+		}
+		await new Promise((r) => setTimeout(r, 1000));
+	}
+	console.log("ok: agent init completed");
+
+	// Terminal inside the agent worktree over the same WS stream channel.
+	const agentPane = `smoke-agent-pane-${Date.now()}`;
+	const agentMarker = "SMOKE_AGENT_TERMINAL_OK";
+	let agentReceived = "";
+	const gotAgentMarker = new Promise<void>((resolve, reject) => {
+		const sub = wsTrpc2.terminal.stream.subscribe(
+			{ paneId: agentPane },
+			{
+				onData: (evt) => {
+					if (evt.type === "data") {
+						agentReceived += evt.data;
+						if (agentReceived.includes(agentMarker)) {
+							sub.unsubscribe();
+							resolve();
+						}
+					}
+				},
+				onError: reject,
+			},
+		);
+		setTimeout(
+			() => reject(new Error("no agent terminal marker within 30s")),
+			30000,
+		);
+	});
+	await client(true).terminal.createOrAttach.mutate({
+		sessionId: agentPane,
+		workspaceId: created.workspace.id,
+		paneId: agentPane,
+		tabId: "smoke-agent-tab",
+		cols: 80,
+		rows: 24,
+		cwd: created.worktreePath,
+	});
+	await client(true).terminal.write.mutate({
+		paneId: agentPane,
+		data: `echo ${agentMarker}\r`,
+	});
+	await gotAgentMarker;
+	console.log("ok: terminal streamed from inside the agent worktree");
+	await client(true).terminal.kill.mutate({ paneId: agentPane });
+
 	wsClient2.close();
 
 	if (failures.length) {
