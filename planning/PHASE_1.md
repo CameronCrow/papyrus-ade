@@ -90,6 +90,36 @@ subtree, (2) de-electronify `client.ts` + the three injection points,
 (`terminal-host`, `pty-subprocess`) at the package source, (5) named pipe
 (D6) in the moved daemon.
 
+### 2b. Router-split findings (scouted 2026-07-10 — the execution map)
+
+Everything routers need from `main/lib/*` now resolves through server-core
+shims, so the remaining coupling is small and enumerated:
+
+- **Direct `electron` imports in core routers (5 sites):**
+  `projects/projects.ts` (dialog + BrowserWindow type — folder picker),
+  `settings/index.ts` (app — likely version/paths), `filesystem/index.ts`
+  (shell — reveal in file manager), `cache/index.ts` (session — cache
+  clearing). Each becomes a capability on the tRPC **context** (per §3
+  context design) with desktop/web implementations, or moves the procedure
+  to the shell router where it genuinely is desktop-only (cache/session is
+  probably shell).
+- **`main/lib/analytics` (×4), `app-state` (×2+2 schemas), `project-icons`
+  (×3), `custom-ringtones`, `provider-keys` (×1)** — analytics becomes a
+  context capability (no-op on server); app-state usages need case-by-case
+  review (UI state vs business state); project-icons is file-based and can
+  move to server-core; provider-keys waits on the SecretStore wiring.
+- Everything else the routers import (`local-db` ×14,
+  `workspace-init-manager` ×5, `workspace-runtime` ×3, `feature-flags`,
+  `agent-init`, `agent-home`, `terminal*`) is **already in server-core**.
+
+Mechanics: move routers to `packages/server-core/src/routers/<name>` one
+at a time, replacing the `lib/trpc` import with a package-local `trpc.ts`
+(initTRPC + superjson + a `ServerContext` carrying capabilities). The
+desktop re-exports them and merges with its shell routers; apps/server
+mounts them directly. Start with the pure ones (utils, cache→shell,
+browser-history, ports, config, settings), then workspaces/projects
+(agent-create smoke becomes possible), then terminal/filesystem/changes.
+
 ## 3. Split the router tree (`apps/desktop/src/lib/trpc/routers/`)
 
 | Router | Side | Notes |

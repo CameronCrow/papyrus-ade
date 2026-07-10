@@ -16,8 +16,9 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
   - [x] Leaf modules moved: `constants`, `env.shared`, `app-environment`, `terminal-escape-filter` (+tests), `terminal-history`, `tree-kill`, `data-batcher`
   - [x] Env-builder cluster moved: `agent-home`, `agent-setup/{paths,shell-wrappers}`, `terminal/env` (+102 tests; two Windows-portability test fixes). Exports map simplified to `./*` wildcard.
   - [x] Terminal cluster: `terminal-host/` (daemon+client, named pipe on win32), `terminal/` manager (host-hooks seam for analytics/UI-state/DB; dev-reset stays desktop), `workspace-runtime/`
-  - [ ] Agent cluster: `agent-*` modules, `local-db`, `static-ports`, `resource-metrics`, `sync`, `scheduler`, `sanitize`
-- [ ] `SecretStore` interface: safeStorage impl (Electron) + file-key impl (server)
+  - [x] Agent cluster: `agent-*` modules (init/repo/scaffold/worktree/memory-backfill/config/setup), `local-db` (host-hooks for migrations dir + fatal dialog), `workspace-init-manager`, `feature-flags`, `user-profile` (223/223 pkg tests green on Windows)
+  - [ ] Still desktop-side (Electron-bound or pending): `provider-keys` (awaits SecretStore wiring), `app-state`, `analytics`, `static-ports`, `resource-metrics`, `sync`, `scheduler`, `sanitize`, `project-icons`, shell modules
+- [x] `SecretStore` interface + file-key impl (AES-256-GCM, 6 tests); safeStorage impl wires up when provider-keys moves
 - [ ] Split routers: core (workspaces, projects, terminal, filesystem, changes, config, settings, ports, sync, cache, utils, resource-metrics, browser-history) vs shell (window, menu, hotkeys, auto-update, permissions, ringtone, notifications, external, browser)
 - [ ] Serve core routers over HTTP + WS (tRPC v11, superjson, observables) — transport layer DONE (health router proves HTTP query + WS observable subscription); core routers land with the server-core extraction
 - [x] Bearer-token auth middleware; token minted to `~/.papyrus/token` on first run (constant-time compare; WS verified at upgrade)
