@@ -1,0 +1,25 @@
+{
+	"name": "@papyrus/server",
+	"version": "0.1.0",
+	"description": "Papyrus headless server — agents, terminals, and files over tRPC (HTTP + WebSocket)",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run src/cli.ts serve",
+		"start": "node --experimental-strip-types src/cli.ts serve",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@trpc/server": "^11.7.1",
+		"superjson": "^2.2.5",
+		"ws": "^8.18.0",
+		"zod": "^4.3.5"
+	},
+	"devDependencies": {
+		"@trpc/client": "^11.7.1",
+		"@types/node": "^24.0.0",
+		"@types/ws": "^8.18.1",
+		"typescript": "^5.9.3"
+	}
+}

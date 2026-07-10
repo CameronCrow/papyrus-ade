@@ -39,6 +39,7 @@
 		"packages/*",
 		"apps/desktop",
 		"apps/docs",
+		"apps/server",
 		"tooling/*"
 	],
 	"resolutions": {

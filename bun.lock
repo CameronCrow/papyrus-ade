@@ -234,6 +234,22 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/server": {
+      "name": "@papyrus/server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@trpc/server": "^11.7.1",
+        "superjson": "^2.2.5",
+        "ws": "^8.18.0",
+        "zod": "^4.3.5",
+      },
+      "devDependencies": {
+        "@trpc/client": "^11.7.1",
+        "@types/node": "^24.0.0",
+        "@types/ws": "^8.18.1",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/agent": {
       "name": "@superset/agent",
       "version": "0.1.0",
@@ -1291,6 +1307,8 @@
     "@opentelemetry/sql-common": ["@opentelemetry/sql-common@0.41.2", "", { "dependencies": { "@opentelemetry/core": "^2.0.0" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0" } }, "sha512-4mhWm3Z8z+i508zQJ7r6Xi7y4mmoJpdvH0fZPFRkWrdp5fq7hhZ2HhYokEOLkfqSMgPR4Z9EyB3DBkbKGOqZiQ=="],
 
     "@orama/orama": ["@orama/orama@3.1.18", "", {}, "sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA=="],
+
+    "@papyrus/server": ["@papyrus/server@workspace:apps/server"],
 
     "@pierre/diffs": ["@pierre/diffs@1.0.10", "", { "dependencies": { "@shikijs/core": "^3.0.0", "@shikijs/engine-javascript": "^3.0.0", "@shikijs/transformers": "^3.0.0", "diff": "8.0.3", "hast-util-to-html": "9.0.5", "lru_map": "0.4.1", "shiki": "^3.0.0" }, "peerDependencies": { "react": "^18.3.1 || ^19.0.0", "react-dom": "^18.3.1 || ^19.0.0" } }, "sha512-ahkpfS30NfaB+PBxnf0/Mc20ySBRTQmM28a7Ojpd0UZixmTyhGhJfBFjvmhX8dSzR22lB3h3OIMMxpB4yYTIOQ=="],
 
