@@ -112,13 +112,26 @@ shims, so the remaining coupling is small and enumerated:
   `workspace-init-manager` ×5, `workspace-runtime` ×3, `feature-flags`,
   `agent-init`, `agent-home`, `terminal*`) is **already in server-core**.
 
-Mechanics: move routers to `packages/server-core/src/routers/<name>` one
-at a time, replacing the `lib/trpc` import with a package-local `trpc.ts`
-(initTRPC + superjson + a `ServerContext` carrying capabilities). The
-desktop re-exports them and merges with its shell routers; apps/server
-mounts them directly. Start with the pure ones (utils, cache→shell,
-browser-history, ports, config, settings), then workspaces/projects
-(agent-create smoke becomes possible), then terminal/filesystem/changes.
+Mechanics: move routers to `packages/server-core/src/routers/<name>`,
+replacing the `lib/trpc` import with a package-local `trpc.ts` (initTRPC +
+superjson + a `ServerCoreContext` carrying capabilities). apps/server
+mounts them directly.
+
+**Hard constraint discovered 2026-07-10:** the repo's bun `isolated`
+linker gives each package its own zod/@trpc/server instances, so a shared
+`t` across the package boundary breaks input inference (TS7031 across
+every router — desktop routers' zod isn't the package t's zod).
+Re-exporting server-core's `t` from desktop `lib/trpc` was tried and
+reverted. Consequences: routers can't migrate one-at-a-time while merged
+into the desktop tree. Viable paths: (a) move the ENTIRE router tree
+(core + shell) into server-core in one wave — shell routers get their
+Electron deps via context capabilities; desktop merges nothing, it just
+mounts the package's `createAppRouter(capabilities)`; or (b) keep two
+separate trees during transition: desktop untouched, apps/server builds
+core routers in server-core against package-local t/zod (some temporary
+duplication of thin router wrappers, zero desktop risk). (b) is the
+momentum-preserving choice: the business logic is already extracted, so
+server routers are thin zod+procedure shells over shared functions.
 
 ## 3. Split the router tree (`apps/desktop/src/lib/trpc/routers/`)
 
