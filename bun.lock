@@ -450,7 +450,9 @@
       "name": "@papyrus/server-core",
       "version": "0.1.0",
       "dependencies": {
+        "@superset/local-db": "workspace:*",
         "@superset/shared": "workspace:*",
+        "default-shell": "^2.2.0",
         "tree-kill": "^1.2.2",
         "zod": "^4.3.5",
       },

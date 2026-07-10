@@ -688,7 +688,7 @@ describe("env", () => {
 		it("should include SUPERSET_ENV for dev/prod separation", () => {
 			const result = buildTerminalEnv(baseParams);
 			expect(result.SUPERSET_ENV).toBeDefined();
-			expect(["development", "production"]).toContain(result.SUPERSET_ENV);
+			expect(["development", "production"]).toContain(result.SUPERSET_ENV ?? "");
 		});
 
 		it("should include SUPERSET_HOOK_VERSION for protocol versioning", () => {
@@ -742,7 +742,9 @@ describe("env", () => {
 				const result = buildTerminalEnv({ ...baseParams, runtime: "codex" });
 				const expected = getAgentCodexHome(baseParams.workspaceId);
 				expect(result.CODEX_HOME).toBe(expected);
-				expect(result.CODEX_HOME).toContain("/.codex");
+				// path.sep-aware: the agent home is OS-native (backslashes on Windows)
+				const { sep } = await import("node:path");
+				expect(result.CODEX_HOME).toContain(`${sep}.codex`);
 				// The terminal-host daemon re-applies buildSafeEnv before the pty
 				// spawn; CODEX_HOME must survive it to reach the codex process.
 				expect(buildSafeEnv(result).CODEX_HOME).toBe(expected);

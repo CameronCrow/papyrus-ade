@@ -5,33 +5,9 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./constants": {
-			"types": "./src/constants.ts",
-			"default": "./src/constants.ts"
-		},
-		"./env.shared": {
-			"types": "./src/env.shared.ts",
-			"default": "./src/env.shared.ts"
-		},
-		"./app-environment": {
-			"types": "./src/app-environment.ts",
-			"default": "./src/app-environment.ts"
-		},
-		"./terminal-escape-filter": {
-			"types": "./src/terminal-escape-filter.ts",
-			"default": "./src/terminal-escape-filter.ts"
-		},
-		"./terminal-history": {
-			"types": "./src/terminal-history.ts",
-			"default": "./src/terminal-history.ts"
-		},
-		"./tree-kill": {
-			"types": "./src/tree-kill.ts",
-			"default": "./src/tree-kill.ts"
-		},
-		"./data-batcher": {
-			"types": "./src/data-batcher.ts",
-			"default": "./src/data-batcher.ts"
+		"./*": {
+			"types": "./src/*.ts",
+			"default": "./src/*.ts"
 		}
 	},
 	"scripts": {
@@ -40,7 +16,9 @@
 		"test": "bun test"
 	},
 	"dependencies": {
+		"@superset/local-db": "workspace:*",
 		"@superset/shared": "workspace:*",
+		"default-shell": "^2.2.0",
 		"tree-kill": "^1.2.2",
 		"zod": "^4.3.5"
 	},
