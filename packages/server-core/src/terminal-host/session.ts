@@ -372,22 +372,28 @@ export class Session {
 	private flushSubprocessStdinQueue(): void {
 		if (!this.subprocess?.stdin || this.disposed) return;
 
+		// If a drain is already pending, wait for it — pushing more writes now
+		// would only grow the stream's internal buffer.
+		if (this.subprocessStdinDrainArmed) return;
+
 		while (this.subprocessStdinQueue.length > 0) {
-			const buf = this.subprocessStdinQueue[0];
+			// Dequeue BEFORE writing: write() returning false still ACCEPTS the
+			// chunk (false only signals backpressure). Leaving the chunk queued
+			// and re-writing it after drain duplicates bytes mid-stream and
+			// desyncs the subprocess frame decoder.
+			const buf = this.subprocessStdinQueue.shift();
+			if (!buf) break;
+			this.subprocessStdinQueuedBytes -= buf.length;
+
 			const canWrite = this.subprocess.stdin.write(buf);
 			if (!canWrite) {
-				if (!this.subprocessStdinDrainArmed) {
-					this.subprocessStdinDrainArmed = true;
-					this.subprocess.stdin.once("drain", () => {
-						this.subprocessStdinDrainArmed = false;
-						this.flushSubprocessStdinQueue();
-					});
-				}
+				this.subprocessStdinDrainArmed = true;
+				this.subprocess.stdin.once("drain", () => {
+					this.subprocessStdinDrainArmed = false;
+					this.flushSubprocessStdinQueue();
+				});
 				return;
 			}
-
-			this.subprocessStdinQueue.shift();
-			this.subprocessStdinQueuedBytes -= buf.length;
 		}
 	}
 
