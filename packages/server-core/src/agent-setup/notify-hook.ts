@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { env } from "shared/env.shared";
+import { env } from "../env.shared";
 import { HOOKS_DIR } from "./paths";
 
 export const NOTIFY_SCRIPT_NAME = "notify.sh";

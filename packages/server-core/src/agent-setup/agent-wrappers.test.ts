@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
 	chmodSync,
@@ -22,7 +22,7 @@ const TEST_OPENCODE_CONFIG_DIR = path.join(TEST_HOOKS_DIR, "opencode");
 const TEST_OPENCODE_PLUGIN_DIR = path.join(TEST_OPENCODE_CONFIG_DIR, "plugin");
 let mockedHomeDir = path.join(TEST_ROOT, "home");
 
-mock.module("shared/env.shared", () => ({
+mock.module("../env.shared", () => ({
 	env: {
 		DESKTOP_NOTIFICATIONS_PORT: 7777,
 	},
@@ -78,7 +78,15 @@ describe("agent-wrappers copilot", () => {
 		rmSync(TEST_ROOT, { recursive: true, force: true });
 	});
 
-	it("rewrites stale superset-notify.json with current hook path", () => {
+	// bun mock.module("node:os") leaks into every later test file in the
+	// shared process; point the mocked homedir back at the real home so the
+	// daemon integration tests see true paths again.
+	afterAll(() => {
+		mockedHomeDir = process.env.USERPROFILE || process.env.HOME || mockedHomeDir;
+	});
+
+	// Executes a bash wrapper script — posix-only (Windows cannot exec .sh).
+	it.skipIf(process.platform === "win32")("rewrites stale superset-notify.json with current hook path", () => {
 		const projectDir = path.join(TEST_ROOT, "project");
 		const hooksDir = path.join(projectDir, ".github", "hooks");
 		const hookFile = path.join(hooksDir, "superset-notify.json");
@@ -153,15 +161,15 @@ describe("agent-wrappers copilot", () => {
 		const wrapperPath = path.join(TEST_BIN_DIR, "mastracode");
 		const wrapper = readFileSync(wrapperPath, "utf-8");
 
-		expect(wrapper).toContain("# Superset wrapper for mastracode");
+		expect(wrapper).toContain("# Papyrus wrapper for mastracode");
 		expect(wrapper).toContain('REAL_BIN="$(find_real_binary "mastracode")"');
 		expect(wrapper).toContain('exec "$REAL_BIN" "$@"');
 	});
 
 	it("replaces stale Cursor hook commands from old superset paths", () => {
 		const cursorHooksPath = path.join(mockedHomeDir, ".cursor", "hooks.json");
-		const staleHookPath = "/tmp/.superset-old/hooks/cursor-hook.sh";
-		const currentHookPath = "/tmp/.superset-new/hooks/cursor-hook.sh";
+		const staleHookPath = "/tmp/.papyrus-old/hooks/cursor-hook.sh";
+		const currentHookPath = "/tmp/.papyrus-new/hooks/cursor-hook.sh";
 
 		mkdirSync(path.dirname(cursorHooksPath), { recursive: true });
 		writeFileSync(
@@ -215,8 +223,8 @@ describe("agent-wrappers copilot", () => {
 			".gemini",
 			"settings.json",
 		);
-		const staleHookPath = "/tmp/.superset-old/hooks/gemini-hook.sh";
-		const currentHookPath = "/tmp/.superset-new/hooks/gemini-hook.sh";
+		const staleHookPath = "/tmp/.papyrus-old/hooks/gemini-hook.sh";
+		const currentHookPath = "/tmp/.papyrus-new/hooks/gemini-hook.sh";
 
 		mkdirSync(path.dirname(geminiSettingsPath), { recursive: true });
 		writeFileSync(
@@ -322,8 +330,8 @@ describe("agent-wrappers copilot", () => {
 			".mastracode",
 			"hooks.json",
 		);
-		const staleHookPath = "/tmp/.superset-old/hooks/notify.sh";
-		const currentHookPath = "/tmp/.superset-new/hooks/notify.sh";
+		const staleHookPath = "/tmp/.papyrus-old/hooks/notify.sh";
+		const currentHookPath = "/tmp/.papyrus-new/hooks/notify.sh";
 
 		mkdirSync(path.dirname(mastraHooksPath), { recursive: true });
 		writeFileSync(

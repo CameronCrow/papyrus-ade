@@ -27,7 +27,7 @@ import {
 } from "./types";
 
 // Test uses a dedicated workspace name for isolation
-const SUPERSET_DIR_NAME = ".papyrus-test";
+const SUPERSET_DIR_NAME = ".papyrus-tlfc";
 const SUPERSET_HOME_DIR = join(homedir(), SUPERSET_DIR_NAME);
 const SOCKET_PATH = getTerminalHostSocketPathFor(SUPERSET_DIR_NAME);
 const TOKEN_PATH = join(SUPERSET_HOME_DIR, "terminal-host.token");
@@ -101,7 +101,10 @@ describe("Terminal Host Session Lifecycle", () => {
 					env: {
 						...process.env,
 						NODE_ENV: "development",
-						SUPERSET_WORKSPACE_NAME: "test",
+						// Other test files set this at module scope (shared bun process);
+						// it must not leak into the daemon child.
+						PAPYRUS_HOME_DIR: undefined,
+						SUPERSET_WORKSPACE_NAME: "tlfc",
 					},
 					stdio: ["ignore", "pipe", "pipe"],
 					detached: true,

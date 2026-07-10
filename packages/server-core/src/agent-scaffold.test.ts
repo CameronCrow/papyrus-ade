@@ -198,10 +198,14 @@ describe("Claude Code bridge", () => {
 		const wt = getAgentWorktreePath(agentId);
 		const claudeMd = readFileSync(join(wt, "CLAUDE.md"), "utf8");
 		const mem = getAgentMemoryDir(agentId);
-		expect(claudeMd).toContain(`@${join(mem, "AGENT.md")}`);
-		expect(claudeMd).toContain(`@${join(mem, "USER.md")}`);
+		// Separator-tolerant: the scaffold appends /memory/... with forward
+		// slashes onto a native base path (Claude Code normalizes both).
+		const normalized = claudeMd.replaceAll("\\", "/");
+		const memNorm = mem.replaceAll("\\", "/");
+		expect(normalized).toContain(`@${memNorm}/AGENT.md`);
+		expect(normalized).toContain(`@${memNorm}/USER.md`);
 		// MEMORY.md must NOT be @imported (native auto-memory owns it).
-		expect(claudeMd).not.toContain(`@${join(mem, "MEMORY.md")}`);
+		expect(normalized).not.toContain(`@${memNorm}/MEMORY.md`);
 	});
 
 	it("points native auto-memory at the canonical dir", () => {

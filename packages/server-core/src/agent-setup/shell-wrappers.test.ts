@@ -117,10 +117,12 @@ describe("shell-wrappers", () => {
 		it("uses --init-command to prepend BIN_DIR to PATH for fish", () => {
 			const args = getShellArgs("/opt/homebrew/bin/fish", TEST_PATHS);
 
+			// Mirror the production fish double-quote escaping (Windows backslashes double inside the quoted string).
+			const escapedBinDir = TEST_BIN_DIR.replaceAll("\\", "\\\\").replaceAll(String.fromCharCode(34), "\\\"").replaceAll("$", "\$");
 			expect(args).toEqual([
 				"-l",
 				"--init-command",
-				`set -l _superset_bin "${TEST_BIN_DIR}"; contains -- "$_superset_bin" $PATH; or set -gx PATH "$_superset_bin" $PATH`,
+				`set -l _superset_bin "${escapedBinDir}"; contains -- "$_superset_bin" $PATH; or set -gx PATH "$_superset_bin" $PATH`,
 			]);
 		});
 
