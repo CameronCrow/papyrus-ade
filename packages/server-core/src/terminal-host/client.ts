@@ -87,6 +87,20 @@ export function setDaemonScriptPathResolver(resolver: () => string): void {
 	daemonScriptPathResolver = resolver;
 }
 
+/**
+ * Optional host-app hook: full argv (after process.execPath) used to spawn
+ * the daemon. Defaults to [scriptPath]. papyrus-server uses this to inject
+ * bun's --preload for the xterm window polyfill when running from source
+ * (bun evaluates CJS deps at link time, before ESM import order can help).
+ */
+let daemonSpawnArgsResolver: ((scriptPath: string) => string[]) | null = null;
+
+export function setDaemonSpawnArgsResolver(
+	resolver: (scriptPath: string) => string[],
+): void {
+	daemonSpawnArgsResolver = resolver;
+}
+
 // Named pipes have no filesystem entry (existsSync is always false), so
 // existence fast-paths are posix-only; pipe liveness is decided by the
 // connect probes each call site already performs.
@@ -1125,7 +1139,12 @@ export class TerminalHostClient extends EventEmitter {
 			// Spawn daemon as detached process
 			let child: ReturnType<typeof spawn> | null = null;
 			try {
-				child = spawn(process.execPath, [daemonScript], {
+				child = spawn(
+					process.execPath,
+					daemonSpawnArgsResolver
+						? daemonSpawnArgsResolver(daemonScript)
+						: [daemonScript],
+					{
 					detached: true,
 					stdio: logFd >= 0 ? ["ignore", logFd, logFd] : "ignore",
 					env: {

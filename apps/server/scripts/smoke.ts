@@ -83,6 +83,60 @@ async function main() {
 	});
 	console.log("ok: unauthenticated WS upgrade refused");
 
+	// 5. Terminal end-to-end: session in the daemon (named pipe on Windows),
+	// bytes streamed back over the WS subscription.
+	const paneId = `smoke-${Date.now()}`;
+	const marker = "SMOKE_TERMINAL_OK";
+	const wsClient2 = createWSClient({
+		url: `ws://127.0.0.1:${PORT}/trpc?token=${token}`,
+		WebSocket: WebSocket as unknown as typeof globalThis.WebSocket,
+	});
+	const wsTrpc2 = createTRPCClient<AppRouter>({
+		links: [wsLink({ client: wsClient2, transformer: superjson })],
+	});
+
+	let received = "";
+	const gotMarker = new Promise<void>((resolve, reject) => {
+		const sub = wsTrpc2.terminal.stream.subscribe(
+			{ paneId },
+			{
+				onData: (evt) => {
+					if (evt.type === "data") {
+						received += evt.data;
+						if (received.includes(marker)) {
+							sub.unsubscribe();
+							resolve();
+						}
+					}
+				},
+				onError: reject,
+			},
+		);
+		setTimeout(() => reject(new Error("no terminal marker within 30s")), 30000);
+	});
+
+	const snapshot = await client(true).terminal.createOrAttach.mutate({
+		sessionId: paneId,
+		workspaceId: "smoke-ws",
+		paneId,
+		tabId: "smoke-tab",
+		cols: 80,
+		rows: 24,
+		cwd: process.env.USERPROFILE || process.env.HOME || ".",
+	});
+	console.log(`ok: terminal session created (attached=${!!snapshot})`);
+
+	await client(true).terminal.write.mutate({
+		paneId,
+		data: `echo ${marker}\r`,
+	});
+	await gotMarker;
+	console.log("ok: terminal bytes streamed over WS subscription");
+
+	await client(true).terminal.kill.mutate({ paneId });
+	console.log("ok: terminal session killed");
+	wsClient2.close();
+
 	if (failures.length) {
 		console.error("SMOKE FAILURES:", failures);
 		process.exit(1);

@@ -1,5 +1,6 @@
 import { router } from "../trpc";
 import { healthRouter } from "./health";
+import { terminalRouter } from "./terminal";
 
 /**
  * The server router. Phase 1 extraction lands the desktop's core routers here
@@ -9,6 +10,7 @@ import { healthRouter } from "./health";
  */
 export const appRouter = router({
 	health: healthRouter,
+	terminal: terminalRouter,
 });
 
 export type AppRouter = typeof appRouter;

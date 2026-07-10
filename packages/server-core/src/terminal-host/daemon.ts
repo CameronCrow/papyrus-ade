@@ -7,10 +7,15 @@
  * Run with: ELECTRON_RUN_AS_NODE=1 electron dist/main/terminal-host.js
  *
  * IPC Protocol:
- * - Uses NDJSON (newline-delimited JSON) over Unix domain socket
- * - Socket: ~/.superset/terminal-host.sock
- * - Auth token: ~/.superset/terminal-host.token
+ * - Uses NDJSON (newline-delimited JSON) over unix socket / Windows named pipe
+ * - Socket: see socket-path.ts (~/.papyrus/terminal-host.sock or \\.\pipe\...)
+ * - Auth token: ~/.papyrus/terminal-host.token
  */
+
+// MUST be the first import: @xterm/headless dereferences `window` at module
+// scope, so the polyfill has to evaluate before anything else in the import
+// graph pulls xterm in (bundled builds inline this; source runs rely on it).
+import "./xterm-env-polyfill";
 
 import { randomBytes } from "node:crypto";
 import {
