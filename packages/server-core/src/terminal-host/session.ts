@@ -194,14 +194,14 @@ export class Session {
 		processEnv.TERM = "xterm-256color";
 
 		const shellArgs = getShellArgs(this.shell);
-		// Built output ships pty-subprocess.js next to the daemon; when the
-		// daemon runs from TS source (bun tests, bun dev) fall back to the .ts —
-		// spawning the missing .js would smear an error message across the
-		// framed IPC stream.
-		const builtSubprocessPath = path.join(__dirname, "pty-subprocess.js");
-		const subprocessPath = existsSync(builtSubprocessPath)
-			? builtSubprocessPath
-			: path.join(__dirname, "pty-subprocess.ts");
+		// Built output ships pty-subprocess next to the daemon: .js in the
+		// Electron dist, .cjs in the papyrus-server dist ("type: module"
+		// package). When the daemon runs from TS source (bun tests) fall back
+		// to the .ts — spawning a missing file would smear an error message
+		// across the framed IPC stream.
+		const subprocessPath = ["pty-subprocess.js", "pty-subprocess.cjs"]
+			.map((f) => path.join(__dirname, f))
+			.find((p) => existsSync(p)) ?? path.join(__dirname, "pty-subprocess.ts");
 
 		// Spawn subprocess with filtered env to prevent leaking NODE_ENV etc.
 		const electronPath = process.execPath;

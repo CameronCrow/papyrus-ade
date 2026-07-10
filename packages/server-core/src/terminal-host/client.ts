@@ -101,6 +101,18 @@ export function setDaemonSpawnArgsResolver(
 	daemonSpawnArgsResolver = resolver;
 }
 
+/**
+ * Optional host-app hook: the executable used to spawn the daemon. Defaults
+ * to process.execPath (Electron-as-node in the desktop app). papyrus-server
+ * overrides this with plain node — node-pty's ConPTY conin socket breaks
+ * under a bun-run daemon on Windows.
+ */
+let daemonExecPathResolver: (() => string) | null = null;
+
+export function setDaemonExecPathResolver(resolver: () => string): void {
+	daemonExecPathResolver = resolver;
+}
+
 // Named pipes have no filesystem entry (existsSync is always false), so
 // existence fast-paths are posix-only; pipe liveness is decided by the
 // connect probes each call site already performs.
@@ -1140,7 +1152,7 @@ export class TerminalHostClient extends EventEmitter {
 			let child: ReturnType<typeof spawn> | null = null;
 			try {
 				child = spawn(
-					process.execPath,
+					daemonExecPathResolver ? daemonExecPathResolver() : process.execPath,
 					daemonSpawnArgsResolver
 						? daemonSpawnArgsResolver(daemonScript)
 						: [daemonScript],

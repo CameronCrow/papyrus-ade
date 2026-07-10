@@ -1,35 +1,31 @@
-import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
 	getTerminalHostClient,
+	setDaemonExecPathResolver,
 	setDaemonScriptPathResolver,
-	setDaemonSpawnArgsResolver,
 } from "@papyrus/server-core/terminal-host/client";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
-const require = createRequire(import.meta.url);
+// The daemon runs under plain Node from a CJS bundle (scripts/build-daemon.ts):
+// node-pty's ConPTY conin socket breaks under a bun-run daemon on Windows,
+// and the bundle inlines the xterm window polyfill + erases TS enums.
+const daemonBundle = join(import.meta.dirname, "..", "..", "dist", "terminal-host.cjs");
 
-// The client spawns the daemon via process.execPath. Under bun (dev) that
-// runs the TS source directly; a bundled production daemon lands with the
-// server build step (Phase 1 hardening).
-setDaemonScriptPathResolver(() =>
-	require.resolve("@papyrus/server-core/terminal-host/daemon"),
-);
+setDaemonScriptPathResolver(() => {
+	if (!existsSync(daemonBundle)) {
+		throw new Error(
+			`terminal-host daemon bundle missing at ${daemonBundle} — run: bun run build:daemon`,
+		);
+	}
+	return daemonBundle;
+});
 
-// Under bun, CJS deps (xterm-headless) evaluate at link time — before ESM
-// import order can apply the window polyfill — so preload it explicitly.
-setDaemonSpawnArgsResolver((scriptPath) =>
-	process.versions.bun
-		? [
-				"run",
-				"--preload",
-				require.resolve(
-					"@papyrus/server-core/terminal-host/xterm-env-polyfill",
-				),
-				scriptPath,
-			]
-		: [scriptPath],
+// Spawn with node even when the server itself runs under bun.
+setDaemonExecPathResolver(() =>
+	process.versions.bun ? "node" : process.execPath,
 );
 
 const createOrAttachInput = z.object({
