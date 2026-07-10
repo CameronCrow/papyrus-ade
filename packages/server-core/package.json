@@ -1,0 +1,52 @@
+{
+	"name": "@papyrus/server-core",
+	"version": "0.1.0",
+	"description": "Papyrus headless core — Electron-free business logic shared by the desktop app and papyrus-server",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./constants": {
+			"types": "./src/constants.ts",
+			"default": "./src/constants.ts"
+		},
+		"./env.shared": {
+			"types": "./src/env.shared.ts",
+			"default": "./src/env.shared.ts"
+		},
+		"./app-environment": {
+			"types": "./src/app-environment.ts",
+			"default": "./src/app-environment.ts"
+		},
+		"./terminal-escape-filter": {
+			"types": "./src/terminal-escape-filter.ts",
+			"default": "./src/terminal-escape-filter.ts"
+		},
+		"./terminal-history": {
+			"types": "./src/terminal-history.ts",
+			"default": "./src/terminal-history.ts"
+		},
+		"./tree-kill": {
+			"types": "./src/tree-kill.ts",
+			"default": "./src/tree-kill.ts"
+		},
+		"./data-batcher": {
+			"types": "./src/data-batcher.ts",
+			"default": "./src/data-batcher.ts"
+		}
+	},
+	"scripts": {
+		"clean": "git clean -xdf .cache .turbo dist node_modules",
+		"typecheck": "tsc --noEmit --emitDeclarationOnly false",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@superset/shared": "workspace:*",
+		"tree-kill": "^1.2.2",
+		"zod": "^4.3.5"
+	},
+	"devDependencies": {
+		"@superset/typescript": "workspace:*",
+		"bun-types": "^1.3.1",
+		"typescript": "^5.9.3"
+	}
+}

@@ -11,7 +11,11 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
 ## Phase 1 — papyrus-server (headless core) ([PHASE_1.md](PHASE_1.md))
 - [x] **SPIKE PASSED (2026-07-10):** node-pty (prebuilt) + ConPTY on Windows ran cmd.exe (ANSI/resize/exit codes), `claude -p` (exit 0), and interactive claude TUI (repaint on resize, clean Ctrl-C) — GO
 - [x] Scaffold `apps/server` (`papyrus serve --port 7777 --bind 127.0.0.1`; config file `~/.papyrus/server.json`; smoke-tested headless on Windows incl. WS subscription + auth rejection)
-- [ ] Extract main-process business logic → `packages/server-core` (agent-*, terminal, terminal-host, workspace-runtime, local-db, terminal-history, app-environment)
+- [ ] Extract main-process business logic → `packages/server-core` (agent-*, terminal, terminal-host, workspace-runtime, local-db)
+  - [x] Package created with the strangler pattern: modules move to `packages/server-core/src`, desktop keeps `export *` shims at the old paths (zero import churn; main build bundles workspace TS deps already)
+  - [x] Leaf modules moved: `constants`, `env.shared`, `app-environment`, `terminal-escape-filter` (+tests), `terminal-history`, `tree-kill`, `data-batcher`
+  - [ ] Terminal cluster: `terminal-host/` (daemon+client), `terminal/`, `workspace-runtime/`
+  - [ ] Agent cluster: `agent-*` modules, `local-db`, `static-ports`, `resource-metrics`, `sync`, `scheduler`, `sanitize`
 - [ ] `SecretStore` interface: safeStorage impl (Electron) + file-key impl (server)
 - [ ] Split routers: core (workspaces, projects, terminal, filesystem, changes, config, settings, ports, sync, cache, utils, resource-metrics, browser-history) vs shell (window, menu, hotkeys, auto-update, permissions, ringtone, notifications, external, browser)
 - [ ] Serve core routers over HTTP + WS (tRPC v11, superjson, observables) — transport layer DONE (health router proves HTTP query + WS observable subscription); core routers land with the server-core extraction

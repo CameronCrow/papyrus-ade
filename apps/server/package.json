@@ -11,6 +11,7 @@
 		"test": "bun test"
 	},
 	"dependencies": {
+		"@papyrus/server-core": "workspace:*",
 		"@trpc/server": "^11.7.1",
 		"superjson": "^2.2.5",
 		"ws": "^8.18.0",
