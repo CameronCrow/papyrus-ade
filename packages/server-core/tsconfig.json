@@ -1,7 +1,10 @@
 {
 	"extends": "@superset/typescript/internal-package.json",
 	"compilerOptions": {
-		"types": ["bun-types"]
+		"types": ["bun-types"],
+		// The extracted desktop modules were written without this flag; keep
+		// moves byte-identical for now and tighten in a dedicated pass.
+		"noUncheckedIndexedAccess": false
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", "dist"]

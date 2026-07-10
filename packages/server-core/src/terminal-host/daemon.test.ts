@@ -8,6 +8,7 @@
  * 4. Respond to hello requests
  */
 
+import { getTerminalHostSocketPathFor } from "./socket-path";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
@@ -20,17 +21,17 @@ import {
 	type IpcRequest,
 	type IpcResponse,
 	PROTOCOL_VERSION,
-} from "../lib/terminal-host/types";
+} from "./types";
 
 // Test uses a dedicated workspace name for isolation
-const SUPERSET_DIR_NAME = ".superset-test";
+const SUPERSET_DIR_NAME = ".papyrus-test";
 const SUPERSET_HOME_DIR = join(homedir(), SUPERSET_DIR_NAME);
-const SOCKET_PATH = join(SUPERSET_HOME_DIR, "terminal-host.sock");
+const SOCKET_PATH = getTerminalHostSocketPathFor(SUPERSET_DIR_NAME);
 const TOKEN_PATH = join(SUPERSET_HOME_DIR, "terminal-host.token");
 const PID_PATH = join(SUPERSET_HOME_DIR, "terminal-host.pid");
 
 // Path to the daemon source file
-const DAEMON_PATH = resolve(__dirname, "index.ts");
+const DAEMON_PATH = resolve(__dirname, "daemon.ts");
 // Polyfill for @xterm/headless in Bun (see xterm-env-polyfill.ts for details)
 const XTERM_POLYFILL_PATH = resolve(__dirname, "xterm-env-polyfill.ts");
 
@@ -97,7 +98,7 @@ describe("Terminal Host Daemon", () => {
 
 			// Start daemon with --preload to polyfill window for @xterm/headless in Bun
 			daemonProcess = spawn(
-				"bun",
+				process.execPath, // bare "bun" cannot resolve the npm .cmd shim on Windows
 				["run", "--preload", XTERM_POLYFILL_PATH, DAEMON_PATH],
 				{
 					env: {

@@ -18,7 +18,10 @@
 	"dependencies": {
 		"@superset/local-db": "workspace:*",
 		"@superset/shared": "workspace:*",
+		"@xterm/addon-serialize": "0.15.0-beta.148",
+		"@xterm/headless": "6.1.0-beta.148",
 		"default-shell": "^2.2.0",
+		"node-pty": "1.1.0",
 		"tree-kill": "^1.2.2",
 		"zod": "^4.3.5"
 	},

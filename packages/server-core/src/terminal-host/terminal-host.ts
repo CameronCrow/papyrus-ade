@@ -21,7 +21,7 @@ import type {
 	ResizeRequest,
 	SignalRequest,
 	WriteRequest,
-} from "../lib/terminal-host/types";
+} from "./types";
 import { createSession, type Session } from "./session";
 
 // =============================================================================

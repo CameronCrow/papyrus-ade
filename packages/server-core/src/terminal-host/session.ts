@@ -11,9 +11,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import type { Socket } from "node:net";
 import * as path from "node:path";
-import { getShellArgs } from "../lib/agent-setup/shell-wrappers";
-import { buildSafeEnv } from "../lib/terminal/env";
-import { HeadlessEmulator } from "../lib/terminal-host/headless-emulator";
+import { existsSync } from "node:fs";
+import { getShellArgs } from "../agent-setup/shell-wrappers";
+import { buildSafeEnv } from "../terminal/env";
+import { HeadlessEmulator } from "./headless-emulator";
 import type {
 	CreateOrAttachRequest,
 	IpcEvent,
@@ -22,8 +23,8 @@ import type {
 	TerminalErrorEvent,
 	TerminalExitEvent,
 	TerminalSnapshot,
-} from "../lib/terminal-host/types";
-import { treeKillAsync } from "../lib/tree-kill";
+} from "./types";
+import { treeKillAsync } from "../tree-kill";
 import {
 	createFrameHeader,
 	PtySubprocessFrameDecoder,
@@ -193,7 +194,14 @@ export class Session {
 		processEnv.TERM = "xterm-256color";
 
 		const shellArgs = getShellArgs(this.shell);
-		const subprocessPath = path.join(__dirname, "pty-subprocess.js");
+		// Built output ships pty-subprocess.js next to the daemon; when the
+		// daemon runs from TS source (bun tests, bun dev) fall back to the .ts —
+		// spawning the missing .js would smear an error message across the
+		// framed IPC stream.
+		const builtSubprocessPath = path.join(__dirname, "pty-subprocess.js");
+		const subprocessPath = existsSync(builtSubprocessPath)
+			? builtSubprocessPath
+			: path.join(__dirname, "pty-subprocess.ts");
 
 		// Spawn subprocess with filtered env to prevent leaking NODE_ENV etc.
 		const electronPath = process.execPath;
