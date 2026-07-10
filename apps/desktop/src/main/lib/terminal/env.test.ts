@@ -219,14 +219,14 @@ describe("env", () => {
 		describe("includes agent runtime env vars", () => {
 			it("should preserve CODEX_HOME so it reaches the codex spawn env", () => {
 				const env = {
-					CODEX_HOME: "/Users/test/.ade-default/agents/abc/.codex",
+					CODEX_HOME: "/Users/test/.papyrus-default/agents/abc/.codex",
 					COLORFGBG: "15;0",
 					PATH: "/usr/bin",
 					SOME_SECRET: "nope",
 				};
 				const result = buildSafeEnv(env);
 				expect(result.CODEX_HOME).toBe(
-					"/Users/test/.ade-default/agents/abc/.codex",
+					"/Users/test/.papyrus-default/agents/abc/.codex",
 				);
 				expect(result.COLORFGBG).toBe("15;0");
 				expect(result.SOME_SECRET).toBeUndefined();

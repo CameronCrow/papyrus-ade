@@ -483,7 +483,7 @@ export function BehaviorSettings({ visibleItems }: BehaviorSettingsProps) {
 								Send anonymous usage data
 							</Label>
 							<p className="text-xs text-muted-foreground">
-								Help improve ADE by sending anonymous usage data
+								Help improve Papyrus by sending anonymous usage data
 							</p>
 						</div>
 						<Switch

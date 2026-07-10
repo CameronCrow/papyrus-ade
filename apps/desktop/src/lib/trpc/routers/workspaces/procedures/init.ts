@@ -151,7 +151,7 @@ export const createInitProcedures = () => {
 				}),
 			)
 			.mutation(async ({ input }) => {
-				// ADE agents own a standalone repo; retry re-runs the agent init
+				// Papyrus agents own a standalone repo; retry re-runs the agent init
 				// job. Returns false for legacy shared-repo workspaces.
 				if (retryAgentInit(input.workspaceId)) {
 					return { success: true };

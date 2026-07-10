@@ -5,7 +5,7 @@ import { SupersetLogo } from "renderer/components/SupersetLogo";
 import { useOpenNewCategoryModal } from "renderer/stores/new-category-modal";
 
 /**
- * First-run / empty onboarding. ADE groups agents under categories, so the
+ * First-run / empty onboarding. Papyrus groups agents under categories, so the
  * entry action is "Create a category"; agents (each with their own repo) are
  * added inside a category via the New Agent modal.
  */

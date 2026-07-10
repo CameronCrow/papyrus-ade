@@ -57,7 +57,7 @@ function NewProjectPage() {
 
 	useEffect(() => {
 		if (parentDir || !homeDir) return;
-		setParentDir(`${homeDir}/.ade/projects`);
+		setParentDir(`${homeDir}/.papyrus/projects`);
 	}, [homeDir, parentDir]);
 
 	return (

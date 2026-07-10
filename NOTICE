@@ -16,3 +16,22 @@ Use of this software remains subject to the Elastic License 2.0.
 
 Third-party components bundled with or adapted by this software are attributed
 in THIRD-PARTY-NOTICES.md.
+
+--------------------------------------------------------------------------------
+
+Papyrus
+
+This product is a modified derivative of ADE (itself a modified derivative of
+Superset, Copyright Superset, Inc.), distributed under the Elastic License 2.0.
+The full license terms are in LICENSE.md.
+
+Modifications made in this derivative include, but are not limited to:
+
+  - Renamed the product to Papyrus.
+  - Restructured the application as a client-server system: a headless
+    papyrus-server daemon and a browser-based web UI, replacing the
+    macOS-only Electron packaging as the primary form factor.
+  - Added Windows support for the server and terminal host.
+  - Removed the remaining Superset hosted-cloud applications.
+
+Use of this software remains subject to the Elastic License 2.0.

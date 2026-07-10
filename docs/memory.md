@@ -1,8 +1,8 @@
 # Agent memory
 
-Every ADE agent has a persistent, self-curated memory. It is what makes an agent an identity rather than a chat window: the agent reads its memory at the start of every session and writes back to it as it learns, so it accumulates knowledge about you and your project over time.
+Every Papyrus agent has a persistent, self-curated memory. It is what makes an agent an identity rather than a chat window: the agent reads its memory at the start of every session and writes back to it as it learns, so it accumulates knowledge about you and your project over time.
 
-The system is adapted from the [Hermes agent](https://github.com/NousResearch/hermes-agent) (MIT). ADE copies Hermes' *shape* — a bounded, file-backed memory the agent maintains itself — but replaces Hermes' mechanism (a custom memory tool inside a bespoke agent loop) with each coding CLI's own native context-file feature. ADE never forks or patches a CLI.
+The system is adapted from the [Hermes agent](https://github.com/NousResearch/hermes-agent) (MIT). Papyrus copies Hermes' *shape* — a bounded, file-backed memory the agent maintains itself — but replaces Hermes' mechanism (a custom memory tool inside a bespoke agent loop) with each coding CLI's own native context-file feature. Papyrus never forks or patches a CLI.
 
 ## Principles
 

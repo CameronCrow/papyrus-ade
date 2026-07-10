@@ -9,13 +9,13 @@ export const PLATFORM = {
 
 const workspace = getWorkspaceName();
 export const SUPERSET_DIR_NAME = workspace
-	? `.ade-${workspace}`
-	: ".ade";
+	? `.papyrus-${workspace}`
+	: ".papyrus";
 export const PROTOCOL_SCHEME = workspace
-	? `ade-${workspace}`
+	? `papyrus-${workspace}`
 	: PROTOCOL_SCHEMES.PROD;
-// Project-level directory name (always .ade, not conditional)
-export const PROJECT_SUPERSET_DIR_NAME = ".ade";
+// Project-level directory name (always .papyrus, not conditional)
+export const PROJECT_SUPERSET_DIR_NAME = ".papyrus";
 export const WORKTREES_DIR_NAME = "worktrees";
 export const PROJECTS_DIR_NAME = "projects";
 export const CONFIG_FILE_NAME = "config.json";

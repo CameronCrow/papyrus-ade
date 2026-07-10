@@ -102,8 +102,8 @@ jobs:
           for file in *.AppImage; do
             if [[ -f "$file" ]]; then
               arch=$(echo "$file" | sed -E 's/.*-([^-]+)\.AppImage$/\1/')
-              cp "$file" "ADE-Canary-${arch}.AppImage"
-              echo "Created canary copy: ADE-Canary-${arch}.AppImage"
+              cp "$file" "Papyrus-Canary-${arch}.AppImage"
+              echo "Created canary copy: Papyrus-Canary-${arch}.AppImage"
             fi
           done
           # Prerelease builds may request canary-linux.yml; keep latest-linux.yml as fallback.
@@ -134,7 +134,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-canary
-          name: "ADE Canary"
+          name: "Papyrus Canary"
           body: |
             **Internal Testing Build**
 

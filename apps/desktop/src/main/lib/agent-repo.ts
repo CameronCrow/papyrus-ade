@@ -24,10 +24,10 @@ export interface AgentRepoResult {
 }
 
 /**
- * Build an Agent's standalone repo + home layout on disk (ADE Phase B, risk #1).
+ * Build an Agent's standalone repo + home layout on disk (Papyrus Phase B, risk #1).
  *
  * Unlike the shared-repo model (`git worktree add` off a project's
- * mainRepoPath), each ADE agent owns its OWN git repo at
+ * mainRepoPath), each Papyrus agent owns its OWN git repo at
  * <agent-home>/worktree. The canonical `memory/` dir is created as a sibling
  * (templates are written later, in the Phase E scaffolder). Returns the paths
  * and the checked-out branch so the caller can persist a `worktrees` row.
@@ -82,7 +82,7 @@ export async function setupAgentRepo({
 		// Set a local identity so the empty initial commit works even when the
 		// machine has no global git user configured. Fresh agent repos are
 		// standalone, so a local identity is appropriate.
-		await git.addConfig("user.name", "ADE Agent", false, "local");
+		await git.addConfig("user.name", "Papyrus Agent", false, "local");
 		await git.addConfig("user.email", "agent@ade.local", false, "local");
 		await git.raw(["commit", "--allow-empty", "-m", "Initial commit"]);
 		branch =

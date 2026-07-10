@@ -14,7 +14,7 @@ interface WorktreeLocationPickerProps {
 
 export function useDefaultWorktreePath() {
 	const { data: homeDir } = electronTrpc.window.getHomeDir.useQuery();
-	return homeDir ? `${homeDir}/.ade/worktrees` : "~/.ade/worktrees";
+	return homeDir ? `${homeDir}/.papyrus/worktrees` : "~/.papyrus/worktrees";
 }
 
 export function WorktreeLocationPicker({

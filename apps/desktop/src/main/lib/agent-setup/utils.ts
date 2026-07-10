@@ -43,11 +43,11 @@ export function findRealBinary(name: string): string | null {
 			: findBinaryPathsUnix(name);
 
 		const homedir = os.homedir();
-		// Filter out wrapper scripts from all ADE directories:
-		// - ~/.ade/bin
-		// - ~/.ade-*/bin (workspace-specific instances)
-		const supersetBinDir = path.join(homedir, ".ade", "bin");
-		const supersetPrefix = path.join(homedir, ".ade-");
+		// Filter out wrapper scripts from all Papyrus directories:
+		// - ~/.papyrus/bin
+		// - ~/.papyrus-*/bin (workspace-specific instances)
+		const supersetBinDir = path.join(homedir, ".papyrus", "bin");
+		const supersetPrefix = path.join(homedir, ".papyrus-");
 		const paths = allPaths.filter(
 			(p) =>
 				p &&

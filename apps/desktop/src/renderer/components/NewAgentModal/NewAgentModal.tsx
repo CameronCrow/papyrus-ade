@@ -48,7 +48,7 @@ type RepoMode = "init" | "clone" | "local";
 const RUNTIME_CHOICES = ["claude", "codex", "opencode"] as const;
 
 /**
- * Create an Agent inside a Category. ADE agents own a standalone repo, so this
+ * Create an Agent inside a Category. Papyrus agents own a standalone repo, so this
  * asks for name + runtime + repo source (empty or clone) + optional avatar and
  * calls workspaces.createAgent (which builds the repo and scaffolds memory).
  * Reuses the new-workspace-modal store (preSelectedProjectId = the category).

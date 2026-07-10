@@ -1,29 +1,56 @@
-import { chmodSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { SUPERSET_DIR_NAME } from "shared/constants";
 
-const ADE_HOME_DIR_ENV = "ADE_HOME_DIR";
+const PAPYRUS_HOME_DIR_ENV = "PAPYRUS_HOME_DIR";
 
 /**
- * Resolve the ADE home dir, reading ADE_HOME_DIR at call time. Prefer this over
- * the SUPERSET_HOME_DIR const in code paths that must honor an ADE_HOME_DIR set
+ * Resolve the Papyrus home dir, reading PAPYRUS_HOME_DIR at call time. Prefer this over
+ * the SUPERSET_HOME_DIR const in code paths that must honor an PAPYRUS_HOME_DIR set
  * after this module was first imported — e.g. a test that overrides the home in
  * its module scope but only after another test file already loaded this module
  * (bun shares one module cache across files). The const below snapshots the value
  * at load, which is fine for the real app where the home never changes.
  */
 export function getSupersetHomeDir(): string {
-	return process.env[ADE_HOME_DIR_ENV] || join(homedir(), SUPERSET_DIR_NAME);
+	return process.env[PAPYRUS_HOME_DIR_ENV] || join(homedir(), SUPERSET_DIR_NAME);
 }
 
 export const SUPERSET_HOME_DIR = getSupersetHomeDir();
-process.env[ADE_HOME_DIR_ENV] = SUPERSET_HOME_DIR;
+process.env[PAPYRUS_HOME_DIR_ENV] = SUPERSET_HOME_DIR;
 
 export const SUPERSET_HOME_DIR_MODE = 0o700;
 export const SUPERSET_SENSITIVE_FILE_MODE = 0o600;
 
+/**
+ * One-time migration from the pre-Papyrus data dir: ~/.ade[-<ws>] → ~/.papyrus[-<ws>].
+ * Only fires when the target doesn't exist yet and the dir wasn't overridden via env.
+ */
+function migrateLegacyHomeDir(): void {
+	if (process.env[PAPYRUS_HOME_DIR_ENV] !== join(homedir(), SUPERSET_DIR_NAME))
+		return;
+	const legacyDir = join(
+		homedir(),
+		basename(SUPERSET_HOME_DIR).replace(/^\.papyrus/, ".ade"),
+	);
+	if (legacyDir === SUPERSET_HOME_DIR) return;
+	if (existsSync(SUPERSET_HOME_DIR) || !existsSync(legacyDir)) return;
+	try {
+		renameSync(legacyDir, SUPERSET_HOME_DIR);
+		console.log(
+			`[app-environment] Migrated data dir ${legacyDir} → ${SUPERSET_HOME_DIR}`,
+		);
+	} catch (error) {
+		console.warn(
+			"[app-environment] Legacy data dir migration failed; starting fresh:",
+			error,
+		);
+	}
+}
+
 export function ensureSupersetHomeDirExists(): void {
+	migrateLegacyHomeDir();
 	if (!existsSync(SUPERSET_HOME_DIR)) {
 		mkdirSync(SUPERSET_HOME_DIR, {
 			recursive: true,
@@ -36,7 +63,7 @@ export function ensureSupersetHomeDirExists(): void {
 		chmodSync(SUPERSET_HOME_DIR, SUPERSET_HOME_DIR_MODE);
 	} catch (error) {
 		console.warn(
-			"[app-environment] Failed to chmod ADE home dir (best-effort):",
+			"[app-environment] Failed to chmod Papyrus home dir (best-effort):",
 			SUPERSET_HOME_DIR,
 			error,
 		);

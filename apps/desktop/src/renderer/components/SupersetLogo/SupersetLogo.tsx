@@ -11,9 +11,9 @@ export function SupersetLogo({ className }: SupersetLogoProps) {
 				"text-foreground font-mono font-bold tracking-[0.25em] text-4xl uppercase select-none",
 				className,
 			)}
-			aria-label="ADE"
+			aria-label="Papyrus"
 		>
-			ADE
+			Papyrus
 		</span>
 	);
 }

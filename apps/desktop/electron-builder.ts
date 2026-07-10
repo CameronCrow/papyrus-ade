@@ -16,8 +16,8 @@ const productName = pkg.productName;
 // are published. TODO(release): confirm GitHub owner/org and set the public repo
 // name before publishing. Must stay in sync with RELEASE_REPO_* in
 // src/main/lib/auto-updater.ts.
-const RELEASE_REPO_OWNER = "per-simmons"; // TODO(release): confirm GitHub owner/org
-const RELEASE_REPO_NAME = "damon-ade"; // TODO(release): set public repo name
+const RELEASE_REPO_OWNER = "CameronCrow"; // TODO(release): confirm GitHub owner/org
+const RELEASE_REPO_NAME = "papyrus-ade"; // TODO(release): set public repo name
 
 // Notarize only when Apple credentials are present in the environment
 // (CI signing job, or a local signed build). electron-builder reads the
@@ -30,7 +30,7 @@ const linuxIconPath = join(pkg.resources, "build/icons");
 const winIconPath = join(pkg.resources, "build/icons/icon.ico");
 
 const config: Configuration = {
-	appId: "studio.persimmons.ade",
+	appId: "dev.cameroncrow.papyrus",
 	productName,
 	copyright: `Copyright © ${currentYear} — ${author}`,
 	electronVersion: pkg.devDependencies.electron.replace(/^\^/, ""),
@@ -181,22 +181,22 @@ const config: Configuration = {
 			CFBundleDisplayName: productName,
 			// Required for macOS microphone permission prompt
 			NSMicrophoneUsageDescription:
-				"ADE needs microphone access so voice-enabled tools like Codex transcription can capture audio input.",
+				"Papyrus needs microphone access so voice-enabled tools like Codex transcription can capture audio input.",
 			// Required for macOS local network permission prompt
 			NSLocalNetworkUsageDescription:
-				"ADE needs access to your local network to discover and connect to development servers running on your network.",
+				"Papyrus needs access to your local network to discover and connect to development servers running on your network.",
 			// Bonjour service types to browse for (triggers the permission prompt)
 			NSBonjourServices: ["_http._tcp", "_https._tcp"],
 			// Required for Apple Events / Automation permission prompt
 			NSAppleEventsUsageDescription:
-				"ADE needs to interact with other applications to run terminal commands and development tools.",
+				"Papyrus needs to interact with other applications to run terminal commands and development tools.",
 		},
 	},
 
 	// Deep linking protocol
 	protocols: {
 		name: productName,
-		schemes: ["ade"],
+		schemes: ["papyrus"],
 	},
 
 	// Linux
@@ -205,7 +205,7 @@ const config: Configuration = {
 		category: "Utility",
 		synopsis: pkg.description,
 		target: ["AppImage"],
-		artifactName: `ade-\${version}-\${arch}.\${ext}`,
+		artifactName: `papyrus-\${version}-\${arch}.\${ext}`,
 	},
 
 	// Windows

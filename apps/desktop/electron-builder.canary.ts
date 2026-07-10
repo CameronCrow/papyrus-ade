@@ -13,7 +13,7 @@ import type { Configuration } from "electron-builder";
 import baseConfig from "./electron-builder";
 import pkg from "./package.json";
 
-const productName = "ADE Canary";
+const productName = "Papyrus Canary";
 const canaryMacIconPath = join(pkg.resources, "build/icons/icon-canary.icns");
 const canaryLinuxIconPath = join(pkg.resources, "build/icons/icon-canary.png");
 const canaryWinIconPath = join(pkg.resources, "build/icons/icon-canary.ico");
@@ -33,7 +33,7 @@ const config: Configuration = {
 	mac: {
 		...baseConfig.mac,
 		...(existsSync(canaryMacIconPath) ? { icon: canaryMacIconPath } : {}),
-		artifactName: `ADE-Canary-\${version}-\${arch}.\${ext}`,
+		artifactName: `Papyrus-Canary-\${version}-\${arch}.\${ext}`,
 		extendInfo: {
 			...baseConfig.mac?.extendInfo,
 			CFBundleName: productName,
@@ -45,13 +45,13 @@ const config: Configuration = {
 		...baseConfig.linux,
 		...(existsSync(canaryLinuxIconPath) ? { icon: canaryLinuxIconPath } : {}),
 		synopsis: `${pkg.description} (Canary)`,
-		artifactName: `ade-canary-\${version}-\${arch}.\${ext}`,
+		artifactName: `papyrus-canary-\${version}-\${arch}.\${ext}`,
 	},
 
 	win: {
 		...baseConfig.win,
 		...(existsSync(canaryWinIconPath) ? { icon: canaryWinIconPath } : {}),
-		artifactName: `ADE-Canary-\${version}-\${arch}.\${ext}`,
+		artifactName: `Papyrus-Canary-\${version}-\${arch}.\${ext}`,
 	},
 };
 

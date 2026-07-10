@@ -6,21 +6,21 @@ import {
 } from "@superset/shared/agent-binaries";
 import { BIN_DIR } from "./paths";
 
-export const WRAPPER_MARKER = "# ADE agent-wrapper v2";
+export const WRAPPER_MARKER = "# Papyrus agent-wrapper v2";
 
 /**
- * Marker substring present in every agent-wrapper header (ADE's own wrappers and
+ * Marker substring present in every agent-wrapper header (Papyrus's own wrappers and
  * the user's Damon install both use "... agent-wrapper ..."). find_real_binary
  * skips any candidate whose header contains it, so a wrapper never resolves to
  * another wrapper.
  */
 const WRAPPER_HEADER_NEEDLE = "agent-wrapper";
 
-// Matches ADE-managed hook paths under the app home dir (~/.ade or
-// ~/.ade-<workspace>). MUST be ADE's own dir, not ~/.damon — otherwise ADE would
+// Matches Papyrus-managed hook paths under the app home dir (~/.papyrus or
+// ~/.papyrus-<workspace>). MUST be Papyrus's own dir, not ~/.damon — otherwise Papyrus would
 // treat the user's real Damon install's hooks as its own and clobber them, and
 // fail to recognize (so would duplicate) its own hooks in shared agent settings.
-const SUPERSET_MANAGED_HOOK_PATH_PATTERN = /\/\.ade(?:-[^/'"\s\\]+)?\//;
+const SUPERSET_MANAGED_HOOK_PATH_PATTERN = /\/\.papyrus(?:-[^/'"\s\\]+)?\//;
 
 export function writeFileIfChanged(
 	filePath: string,
@@ -61,11 +61,11 @@ function buildRealBinaryResolver(): string {
     [ -z "$dir" ] && continue
     dir="\${dir%/}"
     case "$dir" in
-      "${BIN_DIR}"|"$HOME"/.ade/bin|"$HOME"/.ade-*/bin) continue ;;
+      "${BIN_DIR}"|"$HOME"/.papyrus/bin|"$HOME"/.papyrus-*/bin) continue ;;
     esac
     local candidate="$dir/$name"
     if [ -x "$candidate" ] && [ ! -d "$candidate" ]; then
-      # Skip other agent-wrapper shims (another ADE wrapper on PATH, or the
+      # Skip other agent-wrapper shims (another Papyrus wrapper on PATH, or the
       # user's Damon install) so we resolve the real binary directly. Chaining
       # wrappers ping-pongs and keeps prepending --settings, which breaks the
       # CLI's interactive TUI.
@@ -88,9 +88,9 @@ function getMissingBinaryMessage(name: string): string {
 	// commands and URLs contain none).
 	const info = BINARY_INSTALL[name as AgentBinary];
 	if (info) {
-		return `ADE: ${name} not found on PATH. Install ${info.label}: ${info.command} — ${info.url}`;
+		return `Papyrus: ${name} not found on PATH. Install ${info.label}: ${info.command} — ${info.url}`;
 	}
-	return `ADE: ${name} not found in PATH. Install it and ensure it is on PATH, then retry.`;
+	return `Papyrus: ${name} not found in PATH. Install it and ensure it is on PATH, then retry.`;
 }
 
 export function getWrapperPath(binaryName: string): string {
@@ -103,7 +103,7 @@ export function buildWrapperScript(
 ): string {
 	return `#!/bin/bash
 ${WRAPPER_MARKER}
-# ADE wrapper for ${binaryName}
+# Papyrus wrapper for ${binaryName}
 
 ${buildRealBinaryResolver()}
 REAL_BIN="$(find_real_binary "${binaryName}")"

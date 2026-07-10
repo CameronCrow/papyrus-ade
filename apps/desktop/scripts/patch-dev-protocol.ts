@@ -49,7 +49,7 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 function deriveWorkspaceNameFromPath(): string | undefined {
-	const worktreeBase = resolve(homedir(), ".ade/worktrees");
+	const worktreeBase = resolve(homedir(), ".papyrus/worktrees");
 	const cwdRelative = relative(worktreeBase, process.cwd());
 
 	if (!cwdRelative || cwdRelative.startsWith("..") || isAbsolute(cwdRelative)) {
@@ -66,7 +66,7 @@ if (!workspaceName) {
 	process.exit(0);
 }
 const PROTOCOL_SCHEME = `ade-${workspaceName}`;
-const BUNDLE_ID = `studio.persimmons.ade.${workspaceName}`;
+const BUNDLE_ID = `studio.persimmons.papyrus.${workspaceName}`;
 const ELECTRON_DIST_DIR = resolve(
 	import.meta.dirname,
 	"../node_modules/electron/dist",
@@ -79,7 +79,7 @@ if (!existsSync(PLIST_PATH)) {
 	process.exit(0);
 }
 
-const DISPLAY_NAME = `ADE (${workspaceName})`;
+const DISPLAY_NAME = `Papyrus (${workspaceName})`;
 
 try {
 	const currentBundleId = execSync(
@@ -156,7 +156,7 @@ try {
 const commands = [
 	`Add :CFBundleURLTypes array`,
 	`Add :CFBundleURLTypes:0 dict`,
-	`Add :CFBundleURLTypes:0:CFBundleURLName string 'ADE Dev'`,
+	`Add :CFBundleURLTypes:0:CFBundleURLName string 'Papyrus Dev'`,
 	`Add :CFBundleURLTypes:0:CFBundleURLSchemes array`,
 	`Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string '${PROTOCOL_SCHEME}'`,
 	`Add :CFBundleURLTypes:0:CFBundleTypeRole string 'Editor'`,

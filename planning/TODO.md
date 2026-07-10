@@ -3,10 +3,10 @@
 Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLAN_MAIN.md](PLAN_MAIN.md); per-phase detail in [PHASE_0](PHASE_0.md)–[PHASE_5](PHASE_5.md).
 
 ## Phase 0 — Fork groundwork & rebrand ([PHASE_0.md](PHASE_0.md))
-- [ ] Append Papyrus modification block to NOTICE (keep Superset → ADE chain, LICENSE.md, THIRD-PARTY-NOTICES.md untouched)
-- [ ] Rename user-facing strings ADE → Papyrus; decide `~/.ade` vs `~/.papyrus` (+ migration)
-- [ ] Quarantine `apps/{web,api,mobile,admin,marketing,streams}` from the workspace graph; fix any broken shared imports
-- [ ] Rewrite README for Papyrus + target architecture
+- [x] Append Papyrus modification block to NOTICE (keep Superset → ADE chain, LICENSE.md, THIRD-PARTY-NOTICES.md untouched)
+- [x] Rename user-facing strings ADE → Papyrus; decided `~/.papyrus` with one-time migration from `~/.ade` (app-environment.ts)
+- [x] Quarantine `apps/{web,api,mobile,admin,marketing,streams}` from the workspace graph (explicit workspaces list; cloud dev/db scripts removed; fly.toml dropped). Note: packages/{db,auth,chat,chat-mastra} stay — desktop imports them directly; re-audit in Phase 1.
+- [x] Rewrite README for Papyrus + target architecture
 
 ## Phase 1 — papyrus-server (headless core) ([PHASE_1.md](PHASE_1.md))
 - [ ] **SPIKE FIRST:** node-pty spawns `claude` under ConPTY on Windows (resize, ctrl-c, ANSI) — go/no-go gate
@@ -54,6 +54,6 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
 - [ ] Multi-server support via WorkspaceRuntimeRegistry
 
 ## Open decisions
-- [ ] `~/.ade` → `~/.papyrus` migration: yes/no
+- [x] `~/.ade` → `~/.papyrus` migration: YES — one-time renameSync on first boot (Phase 0)
 - [ ] Multi-attach: mirror vs takeover
 - [ ] Verify OpenRouter model bar works from a Windows-hosted server

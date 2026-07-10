@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { getSupersetHomeDir } from "./app-environment";
 
 /**
- * Per-agent home directory layout (ADE).
+ * Per-agent home directory layout (Papyrus).
  *
  * Each Agent (a `workspaces` row) owns a home dir under the app data dir:
  *
@@ -12,12 +12,12 @@ import { getSupersetHomeDir } from "./app-environment";
  *   └── .codex/          Codex config + generated AGENTS.md (codex runtime only)
  *
  * Paths are DERIVED from the agent (workspace) id, not stored in the DB. See
- * docs/memory.md. `<APP_DATA>` is SUPERSET_HOME_DIR (~/.ade[-<ws>]).
+ * docs/memory.md. `<APP_DATA>` is SUPERSET_HOME_DIR (~/.papyrus[-<ws>]).
  */
 
 /**
  * Root of the agents directory. Resolved lazily (per call) rather than captured
- * in a module-level const so a late ADE_HOME_DIR override still routes paths
+ * in a module-level const so a late PAPYRUS_HOME_DIR override still routes paths
  * correctly — see getSupersetHomeDir in app-environment.ts.
  */
 function agentsDir(): string {

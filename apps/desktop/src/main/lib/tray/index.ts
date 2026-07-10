@@ -185,7 +185,7 @@ function buildSessionsSubmenu(
 					label: formatSessionLabel(session),
 					submenu: [
 						{
-							label: "Open in ADE",
+							label: "Open in Papyrus",
 							click: () => openSessionInSuperset(session.workspaceId),
 						},
 						{
@@ -223,8 +223,8 @@ async function quitApp(): Promise<void> {
 		buttons: ["Cancel", "Keep Sessions", "Kill Sessions"],
 		defaultId: 1,
 		cancelId: 0,
-		title: "Quit ADE?",
-		message: "Quit ADE?",
+		title: "Quit Papyrus?",
+		message: "Quit Papyrus?",
 		detail:
 			"Keep sessions running in the background, or kill all sessions and shut down the daemon?",
 	});
@@ -259,7 +259,7 @@ async function updateTrayMenu(): Promise<void> {
 		},
 		{ type: "separator" },
 		{
-			label: "Open ADE",
+			label: "Open Papyrus",
 			click: showWindow,
 		},
 		{
@@ -294,7 +294,7 @@ export function initTray(): void {
 		}
 
 		tray = new Tray(icon);
-		tray.setToolTip("ADE");
+		tray.setToolTip("Papyrus");
 
 		updateTrayMenu().catch((error) => {
 			console.error("[Tray] Failed to build initial menu:", error);

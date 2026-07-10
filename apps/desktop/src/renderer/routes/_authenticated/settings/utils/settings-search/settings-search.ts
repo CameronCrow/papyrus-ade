@@ -396,7 +396,7 @@ export const SETTINGS_ITEMS: SettingsItem[] = [
 		id: SETTING_ITEM_ID.BEHAVIOR_TELEMETRY,
 		section: "behavior",
 		title: "Send anonymous usage data",
-		description: "Help improve ADE by sending anonymous usage data",
+		description: "Help improve Papyrus by sending anonymous usage data",
 		keywords: [
 			"telemetry",
 			"analytics",

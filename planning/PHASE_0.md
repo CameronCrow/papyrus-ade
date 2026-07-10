@@ -87,14 +87,14 @@ section, and a pointer to `planning/`.
 
 ## Checklist
 
-- [ ] Append Papyrus modification block to `NOTICE` (keep Superset → ADE chain)
-- [ ] Verify `LICENSE.md` + `THIRD-PARTY-NOTICES.md` untouched
-- [ ] Rename user-facing strings ADE → Papyrus
-- [ ] `~/.ade` → `~/.papyrus` one-time migration in `app-environment.ts`
-- [ ] Quarantine `apps/{web,api,mobile,admin,marketing,streams}` from workspace + turbo graph
-- [ ] Clean root `package.json` scripts (dev filters, caddy, db:push/migrate)
-- [ ] Audit `packages/*` imports; desktop app builds green after quarantine
-- [ ] Drop `fly.toml`; keep `Caddyfile.example` for Phase 3
-- [ ] Rewrite README (identity, architecture, license note)
+- [x] Append Papyrus modification block to `NOTICE` (keep Superset → ADE chain)
+- [x] Verify `LICENSE.md` + `THIRD-PARTY-NOTICES.md` untouched
+- [x] Rename user-facing strings ADE → Papyrus (src, scripts, electron-builder, workflows, release docs, protocol `papyrus://`, appId `dev.cameroncrow.papyrus`)
+- [x] `~/.ade` → `~/.papyrus` one-time migration in `app-environment.ts` (+ env var `PAPYRUS_HOME_DIR`)
+- [x] Quarantine `apps/{web,api,mobile,admin,marketing,streams}` from workspace + turbo graph (explicit workspaces list)
+- [x] Clean root `package.json` scripts (dev filters, caddy, db:push/migrate)
+- [x] Audit `packages/*` imports — desktop imports `@superset/{auth,chat,chat-mastra,db}` directly, so those packages STAY in the graph; deeper untangling deferred to Phase 1 extraction
+- [x] Drop `fly.toml`; keep `Caddyfile.example` for Phase 3
+- [x] Rewrite README (identity, architecture, license note)
 
 **Exit:** repo builds, is legally tidy, and carries only what Papyrus uses.

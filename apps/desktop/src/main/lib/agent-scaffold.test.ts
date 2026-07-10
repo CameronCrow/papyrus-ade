@@ -9,13 +9,13 @@ import { workspaces, worktrees } from "@superset/local-db";
  * End-to-end memory-scaffold verification (docs/memory.md).
  *
  * Exercises setupAgentRepo + scaffoldAgentMemory + regenerateCodexAgentsMd
- * against a throwaway ADE_HOME_DIR so the user's live ~/.ade-default is never
+ * against a throwaway PAPYRUS_HOME_DIR so the user's live ~/.papyrus-default is never
  * touched. The env var is set BEFORE importing any module that reads
  * SUPERSET_HOME_DIR at load, so all path helpers resolve under TEST_HOME.
  */
 
 const TEST_HOME = join(tmpdir(), `ade-scaffold-test-${process.pid}-${Date.now()}`);
-process.env.ADE_HOME_DIR = TEST_HOME;
+process.env.PAPYRUS_HOME_DIR = TEST_HOME;
 
 // Deferred (dynamic) imports so the env override above wins over module load.
 let getAgentHome: (id: string) => string;
@@ -325,7 +325,7 @@ describe("scaffoldAgentMemory — idempotent re-run (backfill safety)", () => {
 		const excludePath = join(getAgentWorktreePath(agentId), ".git", "info", "exclude");
 		scaffoldAgentMemory({ agentId, agentName: "Testy", runtime: "claude", userName: "Pat" });
 		const exclude = readFileSync(excludePath, "utf8");
-		expect(count(exclude, "# ADE agent bridge files")).toBe(1);
+		expect(count(exclude, "# Papyrus agent bridge files")).toBe(1);
 	});
 });
 
@@ -357,7 +357,7 @@ describe("external worktree (local-path agents) — bridges honor the override",
 
 	it("git-excludes the bridges in the external repo", () => {
 		const exclude = readFileSync(join(externalWt, ".git", "info", "exclude"), "utf8");
-		expect(exclude).toContain("# ADE agent bridge files");
+		expect(exclude).toContain("# Papyrus agent bridge files");
 	});
 
 	it("keeps canonical memory under <agent-home>, not the external worktree", () => {
@@ -466,7 +466,7 @@ describe("backfillAgentMemory — one-time migration of pre-flip agents", () => 
 		expect(fs.existsSync(join(getAgentWorktreePath(EXTERNAL), "CLAUDE.md"))).toBe(false);
 		// Git-excluded in the external repo.
 		const exclude = readFileSync(join(EXTERNAL_WT, ".git", "info", "exclude"), "utf8");
-		expect(exclude).toContain("# ADE agent bridge files");
+		expect(exclude).toContain("# Papyrus agent bridge files");
 	});
 
 	it("is idempotent: a second run neither re-creates nor duplicates", () => {
@@ -478,7 +478,7 @@ describe("backfillAgentMemory — one-time migration of pre-flip agents", () => 
 		// Memory is now non-empty, so the second run skips it — edit preserved.
 		expect(readFileSync(userPath, "utf8")).toBe(edited);
 		const excludePath = join(getAgentWorktreePath(EMPTY), ".git", "info", "exclude");
-		expect(count(readFileSync(excludePath, "utf8"), "# ADE agent bridge files")).toBe(1);
+		expect(count(readFileSync(excludePath, "utf8"), "# Papyrus agent bridge files")).toBe(1);
 	});
 });
 

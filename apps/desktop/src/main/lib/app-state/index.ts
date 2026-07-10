@@ -20,7 +20,7 @@ let _deviceId: string | null = null;
 
 /**
  * Read (or first-time generate) this machine's stable deviceId.
- * Persisted to `~/.ade/device-id`, which MUST be in Syncthing's
+ * Persisted to `~/.papyrus/device-id`, which MUST be in Syncthing's
  * `.stignore` so each Mac generates its own.
  */
 function loadOrCreateDeviceId(): string {

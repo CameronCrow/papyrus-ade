@@ -5,10 +5,10 @@
 
 export type WorkspaceInitStep =
 	| "pending"
-	// ADE agent-creation steps (see main/lib/agent-init.ts)
+	// Papyrus agent-creation steps (see main/lib/agent-init.ts)
 	| "creating_repo" // Creating / cloning the agent's repo
 	| "scaffolding_memory" // Writing memory + bridge files
-	// Legacy shared-repo worktree steps (dormant in ADE)
+	// Legacy shared-repo worktree steps (dormant in Papyrus)
 	| "syncing" // Syncing with remote
 	| "verifying" // Verifying base branch exists
 	| "fetching" // Fetching latest changes
@@ -41,7 +41,7 @@ export const INIT_STEP_MESSAGES: Record<WorkspaceInitStep, string> = {
 };
 
 /**
- * Order of steps for UI progress display (ADE agent creation).
+ * Order of steps for UI progress display (Papyrus agent creation).
  * Used to show completed/current/pending steps in the progress view.
  * The message for "creating_repo" is set dynamically (Creating vs Cloning).
  */

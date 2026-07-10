@@ -1,6 +1,6 @@
-# Local release: build, sign, and notarize ADE on your Mac
+# Local release: build, sign, and notarize Papyrus on your Mac
 
-This is the fallback for producing a **signed + notarized** ADE DMG locally,
+This is the fallback for producing a **signed + notarized** Papyrus DMG locally,
 when you can't (or don't want to) run the GitHub Actions release workflow
 (`.github/workflows/release-desktop.yml`). The output is byte-for-byte the same
 kind of artifact CI produces: a Developer ID–signed, Apple-notarized, stapled
@@ -61,7 +61,7 @@ is set, and hardened runtime is already enabled with the entitlements in
 # Compile the app + prepare native modules (better-sqlite3, node-pty, libsql, …)
 bun run prebuild
 
-# Sign + notarize + package. Uses electron-builder.ts (appId studio.persimmons.ade).
+# Sign + notarize + package. Uses electron-builder.ts (appId dev.cameroncrow.papyrus).
 # --publish never = build locally, do not upload anywhere.
 bun run package -- --publish never --config electron-builder.ts
 ```
@@ -69,8 +69,8 @@ bun run package -- --publish never --config electron-builder.ts
 Notarization adds a few minutes (electron-builder uploads to Apple, waits, then
 staples the ticket). When it finishes, artifacts are in `apps/desktop/release/`:
 
-- `ADE-<version>-arm64.dmg` — the signed, notarized installer to distribute
-- `ADE-<version>-arm64-mac.zip` — zip (needed for Squirrel auto-update)
+- `Papyrus-<version>-arm64.dmg` — the signed, notarized installer to distribute
+- `Papyrus-<version>-arm64-mac.zip` — zip (needed for Squirrel auto-update)
 - `latest-mac.yml` — auto-update manifest
 
 ---
@@ -78,7 +78,7 @@ staples the ticket). When it finishes, artifacts are in `apps/desktop/release/`:
 ## 3. Verify the signature and notarization
 
 ```bash
-APP="release/mac-arm64/ADE.app"
+APP="release/mac-arm64/Papyrus.app"
 
 # Code signature is valid and from your Developer ID
 codesign --verify --deep --strict --verbose=2 "$APP"
@@ -88,7 +88,7 @@ codesign -dv --verbose=4 "$APP" 2>&1 | grep Authority
 spctl --assess --type execute --verbose=4 "$APP"
 
 # Notarization ticket is stapled to the DMG
-xcrun stapler validate "release/ADE-<version>-arm64.dmg"
+xcrun stapler validate "release/Papyrus-<version>-arm64.dmg"
 ```
 
 Expected: `codesign` reports `satisfies its Designated Requirement`, `spctl`

@@ -58,10 +58,10 @@ Auto-update is DISABLED for the v1 public launch (see
 app checks for updates at launch and every few hours using the public repo's
 Releases. Replace `ade` (and confirm the owner) below:
 
-- **macOS manifest**: `https://github.com/per-simmons/damon-ade/releases/latest/download/latest-mac.yml`
-- **Linux manifest**: `https://github.com/per-simmons/damon-ade/releases/latest/download/latest-linux.yml`
-- **macOS installer**: `https://github.com/per-simmons/damon-ade/releases/latest/download/ADE-arm64.dmg`
-- **Linux installer**: `https://github.com/per-simmons/damon-ade/releases/latest/download/ADE-x64.AppImage`
+- **macOS manifest**: `https://github.com/CameronCrow/papyrus-ade/releases/latest/download/latest-mac.yml`
+- **Linux manifest**: `https://github.com/CameronCrow/papyrus-ade/releases/latest/download/latest-linux.yml`
+- **macOS installer**: `https://github.com/CameronCrow/papyrus-ade/releases/latest/download/Papyrus-arm64.dmg`
+- **Linux installer**: `https://github.com/CameronCrow/papyrus-ade/releases/latest/download/Papyrus-x64.AppImage`
 
 The workflow creates stable-named copies (without version) so these URLs always point to the latest build.
 

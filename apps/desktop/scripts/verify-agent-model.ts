@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Verification harness for the ADE agent-fleet data model (Phase B).
+ * Verification harness for the Papyrus agent-fleet data model (Phase B).
  *
  * Writes a Category + Agent (with its own git repo) directly into the live
- * ~/.ade-default DB (via bun:sqlite raw SQL) using the REAL setupAgentRepo
+ * ~/.papyrus-default DB (via bun:sqlite raw SQL) using the REAL setupAgentRepo
  * helper for the repo mechanics, then asserts the on-disk repo + stored
  * runtime + cwd source. Run with the app NOT running. Temporary; not shipped.
  */
@@ -12,13 +12,13 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-// Point app-environment at the real ADE data dir before importing helpers.
-process.env.ADE_HOME_DIR = join(homedir(), ".ade-default");
+// Point app-environment at the real Papyrus data dir before importing helpers.
+process.env.PAPYRUS_HOME_DIR = join(homedir(), ".papyrus-default");
 
 import { Database } from "bun:sqlite";
 import { setupAgentRepo } from "../src/main/lib/agent-repo";
 
-const DB_PATH = join(process.env.ADE_HOME_DIR, "local.db");
+const DB_PATH = join(process.env.PAPYRUS_HOME_DIR, "local.db");
 const db = new Database(DB_PATH);
 const now = Date.now();
 
@@ -40,7 +40,7 @@ async function main() {
 	db.query(
 		`INSERT INTO projects (id, main_repo_path, name, color, tab_order, last_opened_at, created_at)
 		 VALUES (?, '', ?, '#8b5cf6', 999, ?, ?)`,
-	).run(categoryId, "ADE Verify Category", now, now);
+	).run(categoryId, "Papyrus Verify Category", now, now);
 	console.log(`Category created: ${categoryId}`);
 
 	// 2. Agent repo on disk via the REAL helper (git init + memory/ sibling).
@@ -96,7 +96,7 @@ async function main() {
 		"\nPASS: category + agent created; standalone repo on disk; runtime stored; cwd resolves to worktree.",
 	);
 	console.log(
-		'\nUI check: boot the app; category "ADE Verify Category" with agent "Verify Agent" should appear in the rail.',
+		'\nUI check: boot the app; category "Papyrus Verify Category" with agent "Verify Agent" should appear in the rail.',
 	);
 }
 
