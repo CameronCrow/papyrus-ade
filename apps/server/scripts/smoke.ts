@@ -139,12 +139,12 @@ async function main() {
 	// 6. Agent lifecycle: category -> agent (repo + memory scaffold in the
 	// background) -> terminal session inside the agent's worktree. This is the
 	// Phase-1 exit criterion end-to-end.
-	const category = await client(true).agents.createCategory.mutate({
+	const category = await client(true).projects.createCategory.mutate({
 		name: `smoke-cat-${Date.now()}`,
 	});
 	console.log(`ok: category created (${category.id.slice(0, 8)})`);
 
-	const created = await client(true).agents.createAgent.mutate({
+	const created = await client(true).workspaces.createAgent.mutate({
 		projectId: category.id,
 		name: "smoke-agent",
 		runtime: "claude",
@@ -155,8 +155,8 @@ async function main() {
 	// Poll the background init until the job clears or reports done/error.
 	const deadline = Date.now() + 120_000;
 	for (;;) {
-		const progress = await client(true).agents.initProgress.query({
-			agentId: created.workspace.id,
+		const progress = await client(true).workspaces.getInitProgress.query({
+			workspaceId: created.workspace.id,
 		});
 		if (!progress || progress.step === "ready") break;
 		if (progress.error || progress.step === "failed") {

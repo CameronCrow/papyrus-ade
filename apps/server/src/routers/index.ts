@@ -1,5 +1,7 @@
 import { router } from "../trpc";
-import { agentsRouter } from "./agents";
+import { projectsRouter } from "./projects";
+import { settingsRouter, syncRouter } from "./stubs";
+import { workspacesRouter } from "./workspaces";
 import { healthRouter } from "./health";
 import { uiStateRouter } from "./ui-state";
 import { terminalRouter } from "./terminal";
@@ -11,7 +13,10 @@ import { terminalRouter } from "./terminal";
  * they move into packages/server-core — see planning/PHASE_1.md §3.
  */
 export const appRouter = router({
-	agents: agentsRouter,
+	projects: projectsRouter,
+	settings: settingsRouter,
+	sync: syncRouter,
+	workspaces: workspacesRouter,
 	health: healthRouter,
 	terminal: terminalRouter,
 	uiState: uiStateRouter,

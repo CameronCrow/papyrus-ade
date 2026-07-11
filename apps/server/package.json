@@ -1,7 +1,7 @@
 {
 	"name": "@papyrus/server",
 	"version": "0.1.0",
-	"description": "Papyrus headless server — agents, terminals, and files over tRPC (HTTP + WebSocket)",
+	"description": "Papyrus headless server \u00e2\u20ac\u201d agents, terminals, and files over tRPC (HTTP + WebSocket)",
 	"type": "module",
 	"private": true,
 	"scripts": {
@@ -20,7 +20,8 @@
 		"node-pty": "1.1.0",
 		"superjson": "^2.2.5",
 		"ws": "^8.18.0",
-		"zod": "^4.3.5"
+		"zod": "^4.3.5",
+		"drizzle-orm": "0.45.1"
 	},
 	"devDependencies": {
 		"@trpc/client": "^11.7.1",
