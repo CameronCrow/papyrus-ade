@@ -93,3 +93,6 @@ superset-dev-data/
 
 # papyrus-server build output (migrations copied from packages/local-db at build time)
 apps/server/resources/
+
+# webui build output
+apps/webui/dist/
