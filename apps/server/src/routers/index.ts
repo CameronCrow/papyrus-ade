@@ -1,6 +1,7 @@
 import { router } from "../trpc";
 import { agentsRouter } from "./agents";
 import { healthRouter } from "./health";
+import { uiStateRouter } from "./ui-state";
 import { terminalRouter } from "./terminal";
 
 /**
@@ -13,6 +14,7 @@ export const appRouter = router({
 	agents: agentsRouter,
 	health: healthRouter,
 	terminal: terminalRouter,
+	uiState: uiStateRouter,
 });
 
 export type AppRouter = typeof appRouter;

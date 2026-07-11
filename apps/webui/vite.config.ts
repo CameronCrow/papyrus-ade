@@ -42,7 +42,9 @@ export default defineConfig({
 		alias: [
 			// Transport swap — MUST come before the generic aliases.
 			{
-				find: /^.*\/lib\/trpc-client$/,
+				// Matches "renderer/lib/trpc-client", "../../lib/trpc-client" and
+				// "./trpc-client" (trpc-storage.ts) — NOT "api-trpc-client".
+				find: /^.*\/(lib\/)?trpc-client$/,
 				replacement: resolve(__dirname, "src/trpc-client-web.ts"),
 			},
 			// Desktop tsconfig path aliases, reproduced for the renderer source.
@@ -83,6 +85,7 @@ export default defineConfig({
 		},
 	},
 
+	publicDir: resolve(__dirname, "../desktop/src/resources/public"),
 	worker: { format: "es" },
 	optimizeDeps: { include: ["monaco-editor"] },
 
