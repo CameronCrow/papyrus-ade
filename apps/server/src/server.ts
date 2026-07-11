@@ -6,6 +6,7 @@ import { WebSocketServer } from "ws";
 import { extractToken, loadOrMintToken, verifyToken } from "./auth";
 import type { ServerConfig } from "./config";
 import { appRouter } from "./routers";
+import { serveStatic } from "./static";
 import type { ServerContext } from "./trpc";
 
 const TRPC_PREFIX = "/trpc";
@@ -33,9 +34,9 @@ export function startServer(config: ServerConfig): Promise<RunningServer> {
 			trpcHandler(req, res);
 			return;
 		}
-		// Phase 2 serves the built webui SPA from here (same origin, no CORS).
-		res.writeHead(404, { "content-type": "text/plain" });
-		res.end("papyrus-server: not found\n");
+		// The built webui SPA, same origin (no CORS). 404s fall back to
+		// index.html for client-side routing.
+		serveStatic(req, res);
 	});
 
 	// WebSocket endpoint for subscriptions. The token is verified at upgrade
