@@ -2,6 +2,7 @@ import { router } from "../trpc";
 import { projectsRouter } from "./projects";
 import { settingsRouter, syncRouter } from "./stubs";
 import { workspacesRouter } from "./workspaces";
+import { filesystemRouter } from "./filesystem";
 import { healthRouter } from "./health";
 import { uiStateRouter } from "./ui-state";
 import { terminalRouter } from "./terminal";
@@ -17,6 +18,7 @@ export const appRouter = router({
 	settings: settingsRouter,
 	sync: syncRouter,
 	workspaces: workspacesRouter,
+	filesystem: filesystemRouter,
 	health: healthRouter,
 	terminal: terminalRouter,
 	uiState: uiStateRouter,

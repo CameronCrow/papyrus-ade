@@ -1,71 +1,108 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
 import {
-	getTerminalHostClient,
 	setDaemonExecPathResolver,
 	setDaemonScriptPathResolver,
 } from "@papyrus/server-core/terminal-host/client";
+import { workspaces, worktrees } from "@superset/local-db";
+import { localDb } from "@papyrus/server-core/local-db";
 import { observable } from "@trpc/server/observable";
+import { eq } from "drizzle-orm";
+import { join } from "node:path";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
-// The daemon runs under plain Node from a CJS bundle (scripts/build-daemon.ts):
-// node-pty's ConPTY conin socket breaks under a bun-run daemon on Windows,
-// and the bundle inlines the xterm window polyfill + erases TS enums.
-// The server always runs from its CJS bundle (bun cannot load better-sqlite3
-// or drive node-pty on Windows), where the daemon bundle sits alongside it in
-// dist/. The import.meta branch covers source-mode typecheck/tooling.
+// The daemon runs under plain Node from a CJS bundle (see scripts/build.ts),
+// where it sits next to server.cjs in dist/. import.meta.url is undefined in
+// that bundle, so resolve via __dirname there and fall back to createRequire
+// only in source/tooling mode.
 const daemonBundle =
 	typeof __dirname !== "undefined"
 		? join(__dirname, "terminal-host.cjs")
-		: join(import.meta.dirname, "..", "..", "dist", "terminal-host.cjs");
+		: createRequire(import.meta.url).resolve(
+				"@papyrus/server-core/terminal-host/daemon",
+			);
+setDaemonScriptPathResolver(() => daemonBundle);
+setDaemonExecPathResolver(() => (process.versions.bun ? "node" : process.execPath));
 
-setDaemonScriptPathResolver(() => {
-	if (!existsSync(daemonBundle)) {
-		throw new Error(
-			`terminal-host daemon bundle missing at ${daemonBundle} — run: bun run build:daemon`,
-		);
-	}
-	return daemonBundle;
-});
+function terminal() {
+	return getDaemonTerminalManager();
+}
 
-// Spawn with node even when the server itself runs under bun.
-setDaemonExecPathResolver(() =>
-	process.versions.bun ? "node" : process.execPath,
-);
-
-const createOrAttachInput = z.object({
-	sessionId: z.string().min(1),
-	workspaceId: z.string().min(1),
-	paneId: z.string().min(1),
-	tabId: z.string().min(1),
-	cols: z.number().int().min(1).max(1000),
-	rows: z.number().int().min(1).max(1000),
-	cwd: z.string().optional(),
-	shell: z.string().optional(),
-});
+/** Resolve a workspace's on-disk worktree path for cwd defaulting. */
+function workspaceCwd(workspaceId: string): string | undefined {
+	const ws = localDb
+		.select()
+		.from(workspaces)
+		.where(eq(workspaces.id, workspaceId))
+		.get();
+	if (!ws?.worktreeId) return undefined;
+	const wt = localDb
+		.select()
+		.from(worktrees)
+		.where(eq(worktrees.id, ws.worktreeId))
+		.get();
+	return wt?.path;
+}
 
 /**
- * Lean terminal router straight over the daemon client — enough for the
- * Phase-1 headless smoke path (create session → write → stream bytes →
- * detach/kill). The desktop's full terminal router (env building, agent
- * runtimes, workspace wiring) lands when the manager layer is extracted.
+ * Terminal router — mirrors the desktop router paths (PHASE_2: the desktop
+ * router tree is the API contract) over the extracted DaemonTerminalManager,
+ * so the renderer's terminal UI works unchanged. The manager owns scrollback,
+ * history, and the per-pane event fan-out.
  */
 export const terminalRouter = router({
 	createOrAttach: authedProcedure
-		.input(createOrAttachInput)
+		.input(
+			z.object({
+				paneId: z.string(),
+				tabId: z.string(),
+				workspaceId: z.string(),
+				cols: z.number().optional(),
+				rows: z.number().optional(),
+				cwd: z.string().optional(),
+				skipColdRestore: z.boolean().optional(),
+				allowKilled: z.boolean().optional(),
+				themeType: z.enum(["dark", "light"]).optional(),
+			}),
+		)
 		.mutation(async ({ input }) => {
-			const client = getTerminalHostClient();
-			return client.createOrAttach(input);
+			const ws = localDb
+				.select()
+				.from(workspaces)
+				.where(eq(workspaces.id, input.workspaceId))
+				.get();
+			const workspacePath = workspaceCwd(input.workspaceId);
+			const result = await terminal().createOrAttach({
+				paneId: input.paneId,
+				tabId: input.tabId,
+				workspaceId: input.workspaceId,
+				workspaceName: ws?.name,
+				workspacePath,
+				cwd: input.cwd ?? workspacePath,
+				cols: input.cols,
+				rows: input.rows,
+				skipColdRestore: input.skipColdRestore,
+				allowKilled: input.allowKilled,
+				themeType: input.themeType,
+				runtime: ws?.runtime ?? null,
+			});
+			return {
+				paneId: input.paneId,
+				isNew: result.isNew,
+				scrollback: result.scrollback,
+				wasRecovered: result.wasRecovered,
+				isColdRestore: result.isColdRestore,
+				previousCwd: result.previousCwd,
+				claudeSessionId: result.claudeSessionId,
+				snapshot: result.snapshot,
+			};
 		}),
 
 	write: authedProcedure
 		.input(z.object({ paneId: z.string(), data: z.string() }))
 		.mutation(({ input }) => {
-			getTerminalHostClient().writeNoAck({
-				sessionId: input.paneId,
-				data: input.data,
-			});
+			terminal().write(input);
 		}),
 
 	resize: authedProcedure
@@ -76,59 +113,76 @@ export const terminalRouter = router({
 				rows: z.number().int().min(1).max(1000),
 			}),
 		)
-		.mutation(async ({ input }) => {
-			await getTerminalHostClient().resize({
-				sessionId: input.paneId,
-				cols: input.cols,
-				rows: input.rows,
-			});
+		.mutation(({ input }) => {
+			terminal().resize(input);
 		}),
 
-	detach: authedProcedure
-		.input(z.object({ paneId: z.string() }))
-		.mutation(async ({ input }) => {
-			await getTerminalHostClient().detach({ sessionId: input.paneId });
+	signal: authedProcedure
+		.input(z.object({ paneId: z.string(), signal: z.string().optional() }))
+		.mutation(({ input }) => {
+			terminal().signal(input);
 		}),
 
 	kill: authedProcedure
 		.input(z.object({ paneId: z.string() }))
 		.mutation(async ({ input }) => {
-			await getTerminalHostClient().kill({ sessionId: input.paneId });
+			await terminal().kill({ paneId: input.paneId });
 		}),
 
-	listSessions: authedProcedure.query(async () => {
-		return getTerminalHostClient().listSessions();
+	detach: authedProcedure
+		.input(z.object({ paneId: z.string() }))
+		.mutation(({ input }) => {
+			terminal().detach(input);
+		}),
+
+	clearScrollback: authedProcedure
+		.input(z.object({ paneId: z.string() }))
+		.mutation(async ({ input }) => {
+			await terminal().clearScrollback(input);
+		}),
+
+	listDaemonSessions: authedProcedure.query(async () => {
+		return terminal().listDaemonSessions();
 	}),
 
 	/**
-	 * Stream terminal output/exit for one session. Mirrors the desktop
-	 * invariant: exit is a state transition, NOT stream completion.
+	 * Per-pane stream. Exit is a state transition, NOT stream completion
+	 * (paneId is reused across restarts) — matches the desktop invariant.
 	 */
-	stream: authedProcedure
-		.input(z.object({ paneId: z.string() }))
-		.subscription(({ input }) =>
-			observable<
-				| { type: "data"; data: string }
-				| { type: "exit"; exitCode: number; signal?: number }
-			>((emit) => {
-				const client = getTerminalHostClient();
-				const onData = (sessionId: string, data: string) => {
-					if (sessionId === input.paneId) emit.next({ type: "data", data });
-				};
-				const onExit = (
-					sessionId: string,
-					exitCode: number,
-					signal?: number,
-				) => {
-					if (sessionId === input.paneId)
-						emit.next({ type: "exit", exitCode, signal });
-				};
-				client.on("data", onData);
-				client.on("exit", onExit);
-				return () => {
-					client.off("data", onData);
-					client.off("exit", onExit);
-				};
-			}),
-		),
+	stream: authedProcedure.input(z.string()).subscription(({ input: paneId }) =>
+		observable<
+			| { type: "data"; data: string }
+			| {
+					type: "exit";
+					exitCode: number;
+					signal?: number;
+					reason?: "killed" | "exited" | "error";
+			  }
+			| { type: "disconnect"; reason: string }
+			| { type: "error"; error: string; code?: string }
+		>((emit) => {
+			const mgr = terminal();
+			const onData = (data: string) => emit.next({ type: "data", data });
+			const onExit = (
+				exitCode: number,
+				signal?: number,
+				reason?: "killed" | "exited" | "error",
+			) => emit.next({ type: "exit", exitCode, signal, reason });
+			const onDisconnect = (reason: string) =>
+				emit.next({ type: "disconnect", reason });
+			const onError = (payload: { error: string; code?: string }) =>
+				emit.next({ type: "error", error: payload.error, code: payload.code });
+
+			mgr.on(`data:${paneId}`, onData);
+			mgr.on(`exit:${paneId}`, onExit);
+			mgr.on(`disconnect:${paneId}`, onDisconnect);
+			mgr.on(`error:${paneId}`, onError);
+			return () => {
+				mgr.off(`data:${paneId}`, onData);
+				mgr.off(`exit:${paneId}`, onExit);
+				mgr.off(`disconnect:${paneId}`, onDisconnect);
+				mgr.off(`error:${paneId}`, onError);
+			};
+		}),
+	),
 });

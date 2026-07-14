@@ -98,7 +98,7 @@ async function main() {
 	let received = "";
 	const gotMarker = new Promise<void>((resolve, reject) => {
 		const sub = wsTrpc2.terminal.stream.subscribe(
-			{ paneId },
+			paneId,
 			{
 				onData: (evt) => {
 					if (evt.type === "data") {
@@ -116,7 +116,6 @@ async function main() {
 	});
 
 	const snapshot = await client(true).terminal.createOrAttach.mutate({
-		sessionId: paneId,
 		workspaceId: "smoke-ws",
 		paneId,
 		tabId: "smoke-tab",
@@ -175,7 +174,7 @@ async function main() {
 	let agentReceived = "";
 	const gotAgentMarker = new Promise<void>((resolve, reject) => {
 		const sub = wsTrpc2.terminal.stream.subscribe(
-			{ paneId: agentPane },
+			agentPane,
 			{
 				onData: (evt) => {
 					if (evt.type === "data") {
@@ -195,7 +194,6 @@ async function main() {
 		);
 	});
 	await client(true).terminal.createOrAttach.mutate({
-		sessionId: agentPane,
 		workspaceId: created.workspace.id,
 		paneId: agentPane,
 		tabId: "smoke-agent-tab",

@@ -59,10 +59,12 @@ export function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 
 	res.writeHead(200, {
 		"content-type": MIME[extname(filePath).toLowerCase()] ?? "application/octet-stream",
-		// Conservative CSP: same-origin app; WS back to same host for tRPC.
+		// CSP mirrors the desktop renderer's (index.html): xterm's ImageAddon
+		// needs 'wasm-unsafe-eval'; terminals/webviews need blob:/data: and
+		// ws/wss back to the same origin for tRPC subscriptions.
 		"content-security-policy":
 			filePath === indexPath
-				? "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+				? "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' data: blob: ws: wss:; img-src 'self' data: blob: https: http:; font-src 'self' data:; frame-src 'self' https: http: data: blob:; child-src 'self' blob:; worker-src 'self' blob:"
 				: "",
 	});
 	createReadStream(filePath).pipe(res);
