@@ -5,6 +5,7 @@ import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
 import { extractToken, loadOrMintToken, verifyToken } from "./auth";
 import type { ServerConfig } from "./config";
+import { isLockedOut, recordAuthResult } from "./rate-limit";
 import { appRouter } from "./routers";
 import { serveStatic } from "./static";
 import type { ServerContext } from "./trpc";
@@ -19,9 +20,15 @@ export interface RunningServer {
 export function startServer(config: ServerConfig): Promise<RunningServer> {
 	const { token, minted, path } = loadOrMintToken();
 
-	const contextFor = (req: IncomingMessage): ServerContext => ({
-		authed: verifyToken(token, extractToken(req.headers.authorization, req.url)),
-	});
+	const contextFor = (req: IncomingMessage): ServerContext => {
+		if (isLockedOut(req)) return { authed: false };
+		const ok = verifyToken(
+			token,
+			extractToken(req.headers.authorization, req.url),
+		);
+		recordAuthResult(req, ok);
+		return { authed: ok };
+	};
 
 	const trpcHandler = createHTTPHandler({
 		router: appRouter,
@@ -51,10 +58,16 @@ export function startServer(config: ServerConfig): Promise<RunningServer> {
 	});
 
 	server.on("upgrade", (req, socket, head) => {
+		if (isLockedOut(req)) {
+			socket.write("HTTP/1.1 429 Too Many Requests\r\n\r\n");
+			socket.destroy();
+			return;
+		}
 		const ok = verifyToken(
 			token,
 			extractToken(req.headers.authorization, req.url),
 		);
+		recordAuthResult(req, ok);
 		if (!ok || !req.url?.startsWith(TRPC_PREFIX)) {
 			socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
 			socket.destroy();
