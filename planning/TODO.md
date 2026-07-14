@@ -37,13 +37,14 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
 - [x] **M1 REACHED: full workflow in Chrome on Windows** — rail, model bar, Agent Files (scaffolded CLAUDE.md/opencode.json), live terminal echo (planning/m1-browser-terminal.png)
 
 ## Phase 3 — Remote access + iPhone ([PHASE_3.md](PHASE_3.md))
-- [ ] Tailscale Serve path tested + documented (blessed path)
-- [ ] LAN + Caddy alternative documented (adapt Caddyfile.example)
-- [ ] PWA manifest + service worker + apple-touch-icons
-- [ ] iOS keyboard: xterm focus shim + on-screen key bar (Esc/Tab/Ctrl/arrows)
-- [ ] Resubscribe on visibilitychange
-- [ ] Responsive layout: rail → drawer, tabs → swipe strip, Agent Files → sheet
-- [ ] **M2: drive an agent from the iPhone over Tailscale, survives lock/unlock**
+- [x] Tailscale Serve path documented (blessed path) — docs/remote-access.md (live test needs a second device)
+- [x] LAN + Caddy alternative documented (adapt Caddyfile.example) — docs/remote-access.md
+- [x] PWA manifest + service worker + apple-touch-icons — manifest.webmanifest, service-worker.js (shell cache + offline page, network-only /trpc), apple meta; both serve 200
+- [x] Token login gate — src/login-gate.ts, Playwright-verified (no/wrong/right token)
+- [ ] iOS keyboard: xterm focus shim + on-screen key bar (Esc/Tab/Ctrl/arrows) — NEEDS REAL iOS DEVICE; not safe to build blind into the shared renderer
+- [ ] Resubscribe on visibilitychange — wsClient auto-retry wired; explicit visibility nudge + scrollback replay pending (verify with device)
+- [ ] Responsive layout: rail → drawer, tabs → swipe strip, Agent Files → sheet — needs device/emulator verification
+- [ ] **M2: drive an agent from the iPhone over Tailscale, survives lock/unlock** — BLOCKED on Cameron running it from his iPhone; server + PWA + docs are ready
 
 ## Phase 4 — Parity & hardening ([PHASE_4.md](PHASE_4.md))
 - [ ] Provider-keys encrypted at rest + web OpenRouter key flow
