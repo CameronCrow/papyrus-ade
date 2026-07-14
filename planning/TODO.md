@@ -27,14 +27,14 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
 - [x] Headless smoke test on Windows: auth (HTTP+WS) → terminal over named pipe → create category → create agent (repo + memory scaffold) → terminal streamed from inside the agent worktree → SMOKE OK (`apps/server/scripts/smoke.ts`); macOS run still pending
 
 ## Phase 2 — apps/webui (browser client) ([PHASE_2.md](PHASE_2.md))
-- [ ] Scaffold `apps/webui` (Vite SPA) seeded from desktop renderer
-- [ ] Swap ipcLink → httpBatchLink + wsLink (+ sessionIdLink)
-- [ ] `shell` capability interface: web impls for preload/Electron-only surface
-- [ ] Terminal over WS subscription; renderer fallback webgl → canvas/dom
-- [ ] Token login screen
-- [ ] Reconnect + scrollback replay on WS drop
-- [ ] papyrus-server serves the built SPA (same origin)
-- [ ] **M1: full workflow at localhost:7777 in Chrome on Windows**
+- [x] Scaffold `apps/webui` (Vite SPA) — ALIASES into the desktop renderer (single source of truth), not a copy
+- [x] Swap ipcLink → httpBatchLink + wsLink (+ sessionIdLink) — src/trpc-client-web.ts, aliased over any */lib/trpc-client
+- [x] `shell` capability interface: web impls for the preload surface (src/shell-web.ts — App/ipcRenderer/webUtils shims)
+- [x] Terminal over WS subscription — live cmd.exe in the browser, bidirectional (server terminal router mirrors desktop paths over DaemonTerminalManager)
+- [ ] Token login screen — DEFERRED (token in localStorage; probe injects it). Needed before M2 remote use.
+- [ ] Reconnect + scrollback replay on WS drop — wsClient retry wired; explicit resubscribe+replay still to verify
+- [x] papyrus-server serves the built SPA (static.ts, same origin, CSP mirrors desktop)
+- [x] **M1 REACHED: full workflow in Chrome on Windows** — rail, model bar, Agent Files (scaffolded CLAUDE.md/opencode.json), live terminal echo (planning/m1-browser-terminal.png)
 
 ## Phase 3 — Remote access + iPhone ([PHASE_3.md](PHASE_3.md))
 - [ ] Tailscale Serve path tested + documented (blessed path)
