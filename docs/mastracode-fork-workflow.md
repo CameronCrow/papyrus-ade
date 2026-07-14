@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[papyrus-ade]]"
+---
 # Mastracode Fork Bundle Workflow
 
 This repo resolves `mastracode` from a Superset-managed fork bundle:
@@ -106,3 +111,9 @@ bun install
 ```bash
 rg -n "mastracode-v0.4.0-superset|mastracode@https://github.com/superset-sh/mastra/releases/download" bun.lock package.json
 ```
+
+## Related
+
+- [[Repos/papyrus-ade/docs/memory|memory]]
+- [[Repos/papyrus-ade/docs/cookbook/README|Cookbook]]
+- [[papyrus-ade]]

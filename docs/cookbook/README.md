@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[papyrus-ade]]"
+---
 # WIP - Parallel Coding Agent Cookbook
 
 How to run 100 agents in parallel without losing your mind, a practical guide.
@@ -106,3 +111,9 @@ There's a high switching cost between
 
 #### 4. Enforce type-safety, lint, and coding standards
  -->
+
+## Related
+
+- [[Repos/papyrus-ade/docs/mastracode-fork-workflow|mastracode-fork-workflow]]
+- [[Repos/papyrus-ade/docs/memory|memory]]
+- [[papyrus-ade]]

@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 1 — Extract `papyrus-server` (headless core) (~4–7 days)
 
 The center of gravity: make the Electron main process's brain run as a plain
@@ -198,3 +203,10 @@ disk) → spawn terminal session → write `echo hi` → assert bytes stream bac
 
 **Exit:** `papyrus serve` runs headless on Windows and macOS; the smoke
 script can create an agent, spawn a session, and stream terminal bytes.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_0|PHASE_0]]
+- [[Repos/papyrus-ade/planning/PHASE_2|PHASE_2]]
+- [[Repos/papyrus-ade/planning/TODO|TODO]]

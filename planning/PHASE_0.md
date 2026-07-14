@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 0 — Fork groundwork & rebrand (~0.5–1 day)
 
 Make the fork legally tidy, named Papyrus, and lean — before any architecture
@@ -98,3 +103,9 @@ section, and a pointer to `planning/`.
 - [x] Rewrite README (identity, architecture, license note)
 
 **Exit:** repo builds, is legally tidy, and carries only what Papyrus uses.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_1|PHASE_1]]
+- [[Repos/papyrus-ade/planning/TODO|TODO]]

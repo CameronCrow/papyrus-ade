@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[papyrus-ade]]"
+---
 # Papyrus TODO
 
 Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLAN_MAIN.md](PLAN_MAIN.md); per-phase detail in [PHASE_0](PHASE_0.md)–[PHASE_5](PHASE_5.md).
@@ -64,3 +69,10 @@ Working checklist for the OS-agnostic build-out. Source of truth for scope: [PLA
 - [x] `~/.ade` → `~/.papyrus` migration: YES — one-time renameSync on first boot (Phase 0)
 - [ ] Multi-attach: mirror vs takeover
 - [ ] Verify OpenRouter model bar works from a Windows-hosted server
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_0|PHASE_0]]
+- [[Repos/papyrus-ade/planning/PHASE_1|PHASE_1]]
+- [[papyrus-ade]]

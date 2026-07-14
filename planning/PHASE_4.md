@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 4 — Parity & hardening (~4–6 days)
 
 Close the gap between "works" and "daily-drivable from all three devices
@@ -60,3 +65,9 @@ with no Electron install anywhere."
 
 **Exit:** daily-drivable from Windows laptop, Mac, and iPhone; no Electron
 install required anywhere.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_3|PHASE_3]]
+- [[Repos/papyrus-ade/planning/PHASE_5|PHASE_5]]

@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 2 — `apps/webui`: the browser client (~5–8 days)
 
 Turn the desktop renderer into a browser SPA served by papyrus-server.
@@ -79,3 +84,9 @@ The renderer's Electron dependencies are small and enumerable:
 **Exit (Milestone M1):** on the Windows laptop, `papyrus serve` + Chrome at
 `localhost:7777` gives the full ADE workflow — create team/agent, sessions
 spawn, model bar works, Agent Files panel live.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_1|PHASE_1]]
+- [[Repos/papyrus-ade/planning/PHASE_3|PHASE_3]]

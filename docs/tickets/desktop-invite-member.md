@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[papyrus-ade]]"
+---
 # Desktop: Invite Member
 
 ## What to Ship
@@ -903,3 +908,9 @@ bun install
 
 **Tests:**
 - [ ] `bun test packages/shared/src/auth/authorization/authorization.test.ts`
+
+## Related
+
+- [[Repos/papyrus-ade/docs/mastracode-fork-workflow|mastracode-fork-workflow]]
+- [[Repos/papyrus-ade/docs/memory|memory]]
+- [[papyrus-ade]]

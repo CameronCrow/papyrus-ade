@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[papyrus-ade]]"
+---
 # Papyrus — OS-Agnostic Web App Plan
 
 **Goal:** Turn the ADE fork (macOS-only Electron app) into **Papyrus**: a self-hosted, browser-based agentic development environment usable from a Windows laptop, a Mac, and an iPhone — one server, any screen.
@@ -107,3 +112,11 @@ Detailed working docs live in per-phase files; this table is the map.
 | **Total to M2** | **~12–20 dev-days** | |
 
 Sequencing note: Phase 1's Windows node-pty spike is the go/no-go gate — run it first. Everything else is well-trodden ground.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/TODO|TODO]]
+- [[Repos/papyrus-ade/planning/PHASE_0|PHASE_0]]
+- [[Repos/papyrus-ade/planning/PHASE_1|PHASE_1]]
+- [[Repos/papyrus-ade/planning/PHASE_2|PHASE_2]]
+- [[papyrus-ade]]

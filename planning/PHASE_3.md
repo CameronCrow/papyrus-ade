@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 3 — Remote access + iPhone (~2–4 days)
 
 Same app, reachable from the phone. Two halves: the network path (easy,
@@ -57,3 +62,9 @@ real device time:
 **Exit (Milestone M2):** from the iPhone over Tailscale: open Papyrus from
 the home screen, attach to a running session, send a prompt to an agent,
 watch output live; survives lock/unlock without a dead terminal.
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_2|PHASE_2]]
+- [[Repos/papyrus-ade/planning/PHASE_4|PHASE_4]]

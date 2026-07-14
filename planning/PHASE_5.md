@@ -1,3 +1,8 @@
+---
+type: reference
+tags: [repo/papyrus-ade]
+up: "[[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]"
+---
 # Phase 5 — Optional endgame (unscheduled)
 
 None of this blocks daily use; each item has a trigger condition. Do not
@@ -32,3 +37,9 @@ Client-side it's a server-picker + per-server token store.
 - [ ] (triggered) Electron thin shell over server + webui
 - [ ] (triggered) Capacitor iOS wrapper
 - [ ] (triggered) Multi-server via `WorkspaceRuntimeRegistry` + server picker
+
+## Related
+
+- [[Repos/papyrus-ade/planning/PLAN_MAIN|PLAN_MAIN]]
+- [[Repos/papyrus-ade/planning/PHASE_4|PHASE_4]]
+- [[Repos/papyrus-ade/planning/TODO|TODO]]
