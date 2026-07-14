@@ -1,4 +1,12 @@
+import {
+	PROVIDER_IDS,
+	clearProviderKey,
+	getProviderKeyStatus,
+	setProviderKey,
+} from "@papyrus/server-core/provider-keys";
+import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
 /**
@@ -10,6 +18,44 @@ import { authedProcedure, router } from "../trpc";
 export const settingsRouter = router({
 	/** Ringtones are a desktop nicety; none selected headless. */
 	getSelectedRingtoneId: authedProcedure.query(() => null),
+
+	// Provider API keys — encrypted at rest via the server's file-key
+	// SecretStore. The renderer only ever learns presence; the key itself is
+	// never returned.
+	providerKeys: router({
+		status: authedProcedure.query(() => getProviderKeyStatus()),
+
+		set: authedProcedure
+			.input(
+				z.object({
+					provider: z.enum(PROVIDER_IDS),
+					key: z.string().refine((v) => v.trim().length > 0, {
+						message: "API key must not be empty",
+					}),
+				}),
+			)
+			.mutation(({ input }) => {
+				try {
+					setProviderKey(input.provider, input.key);
+				} catch (error) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message:
+							error instanceof Error
+								? error.message
+								: "Failed to store provider key",
+					});
+				}
+				return { success: true };
+			}),
+
+		clear: authedProcedure
+			.input(z.object({ provider: z.enum(PROVIDER_IDS) }))
+			.mutation(({ input }) => {
+				clearProviderKey(input.provider);
+				return { success: true };
+			}),
+	}),
 });
 
 export const syncRouter = router({

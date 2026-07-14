@@ -211,6 +211,29 @@ async function main() {
 
 	wsClient2.close();
 
+	// 7. Provider keys: encrypted at rest via the file-key SecretStore.
+	const secret = `sk-or-smoke-${Date.now()}`;
+	await client(true).settings.providerKeys.set.mutate({
+		provider: "openrouter",
+		key: secret,
+	});
+	const keyStatus = await client(true).settings.providerKeys.status.query();
+	if (!keyStatus.openrouter) failures.push("provider key status not set");
+	else console.log("ok: provider key stored (status=true)");
+
+	// The plaintext must NOT appear in the sqlite DB (encrypted blob only).
+	const dbBytes = readFileSync(join(home, "local.db"));
+	if (dbBytes.includes(Buffer.from(secret))) {
+		failures.push("provider key plaintext found in local.db");
+	} else {
+		console.log(
+			"ok: provider key encrypted at rest (no plaintext in local.db)",
+		);
+	}
+	await client(true).settings.providerKeys.clear.mutate({
+		provider: "openrouter",
+	});
+
 	if (failures.length) {
 		console.error("SMOKE FAILURES:", failures);
 		process.exit(1);

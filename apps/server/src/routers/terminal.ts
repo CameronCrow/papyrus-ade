@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
+import { getProviderKey } from "@papyrus/server-core/provider-keys";
 import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
+import { setOpenRouterKeyResolver } from "@papyrus/server-core/terminal/env";
 import {
 	setDaemonExecPathResolver,
 	setDaemonScriptPathResolver,
@@ -24,6 +26,10 @@ const daemonBundle =
 			);
 setDaemonScriptPathResolver(() => daemonBundle);
 setDaemonExecPathResolver(() => (process.versions.bun ? "node" : process.execPath));
+
+// Inject the stored OpenRouter key into agent terminals (kimi/minimax/glm run
+// Claude Code pointed at OpenRouter). Decrypted server-side only.
+setOpenRouterKeyResolver(() => getProviderKey("openrouter"));
 
 function terminal() {
 	return getDaemonTerminalManager();

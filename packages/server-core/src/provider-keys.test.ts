@@ -1,19 +1,18 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { setSecretStore } from "./secret-store-host";
 
-// In-memory stand-ins for electron safeStorage and the local sqlite settings row.
-// safeStorage is unavailable in a headless test runner, so we mock it; the toggle
-// lets us exercise the graceful "encryption unavailable" path too.
+// In-memory stand-ins for the SecretStore and the local sqlite settings row.
+// The toggle lets us exercise the graceful "encryption unavailable" path too.
 let encryptionAvailable = true;
 let settingsRow: { providerApiKeys?: Record<string, string> } | null = null;
 
-mock.module("electron", () => ({
-	safeStorage: {
-		isEncryptionAvailable: () => encryptionAvailable,
-		// Reversible, deterministic stand-in for OS-backed encryption.
-		encryptString: (plain: string) => Buffer.from(`enc:${plain}`, "utf8"),
-		decryptString: (buf: Buffer) => buf.toString("utf8").replace(/^enc:/, ""),
-	},
-}));
+// Register a reversible, deterministic SecretStore (the desktop uses
+// safeStorage; the server uses a file key — this stands in for both).
+setSecretStore({
+	isAvailable: () => encryptionAvailable,
+	encryptString: (plain: string) => Buffer.from(`enc:${plain}`, "utf8"),
+	decryptString: (buf: Buffer) => buf.toString("utf8").replace(/^enc:/, ""),
+});
 
 mock.module("./local-db", () => ({
 	localDb: {
