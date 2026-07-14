@@ -1,6 +1,11 @@
 // Order matters: the preload shim must exist before any renderer module
 // evaluates (stores read window.App at import time).
 import "./shell-web";
-// Boot the desktop renderer app itself — the renderer source is the single
-// source of truth; only transport + shell differ (see vite.config.ts).
-import "../../desktop/src/renderer/index";
+import "./register-sw";
+import { ensureAuthenticated } from "./login-gate";
+
+// Gate on a validated token, THEN dynamically import the renderer (so the
+// heavy bundle and its authed boot calls don't run until we're connected).
+ensureAuthenticated().then(() => {
+	import("../../desktop/src/renderer/index");
+});

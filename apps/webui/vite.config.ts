@@ -85,7 +85,7 @@ export default defineConfig({
 		},
 	},
 
-	publicDir: resolve(__dirname, "../desktop/src/resources/public"),
+	publicDir: resolve(__dirname, "public"),
 	worker: { format: "es" },
 	optimizeDeps: { include: ["monaco-editor"] },
 

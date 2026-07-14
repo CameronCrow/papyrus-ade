@@ -64,7 +64,7 @@ export function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 		// ws/wss back to the same origin for tRPC subscriptions.
 		"content-security-policy":
 			filePath === indexPath
-				? "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' data: blob: ws: wss:; img-src 'self' data: blob: https: http:; font-src 'self' data:; frame-src 'self' https: http: data: blob:; child-src 'self' blob:; worker-src 'self' blob:"
+				? "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' data: blob: ws: wss:; img-src 'self' data: blob: https: http:; font-src 'self' data:; frame-src 'self' https: http: data: blob:; child-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'"
 				: "",
 	});
 	createReadStream(filePath).pipe(res);
