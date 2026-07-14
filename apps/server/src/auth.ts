@@ -36,6 +36,24 @@ export function loadOrMintToken(): TokenInfo {
 	return { token, minted: true, path };
 }
 
+/**
+ * Rotate the bearer token: mint a fresh one, overwrite ~/.papyrus/token, and
+ * return it. Any device holding the old token is immediately locked out and
+ * must re-enter the new one.
+ */
+export function rotateToken(): TokenInfo {
+	const home = ensurePapyrusHomeDir();
+	const path = join(home, TOKEN_FILE);
+	const token = randomBytes(32).toString("hex");
+	writeFileSync(path, `${token}\n`, { mode: PAPYRUS_SENSITIVE_FILE_MODE });
+	try {
+		chmodSync(path, PAPYRUS_SENSITIVE_FILE_MODE);
+	} catch {
+		// Windows: best-effort; user-only home dir ACL is the boundary.
+	}
+	return { token, minted: true, path };
+}
+
 export function verifyToken(expected: string, presented: string | undefined) {
 	if (!presented) return false;
 	const a = Buffer.from(expected);

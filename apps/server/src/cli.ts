@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { rotateToken } from "./auth";
 import { loadConfig } from "./config";
 import { startServer } from "./server";
 
@@ -6,12 +7,17 @@ const HELP = `papyrus-server
 
 Usage:
   papyrus serve [--port <n>] [--bind <addr>]
+  papyrus token rotate
 
 Options:
   --port <n>     Port to listen on (default 7777, or "port" in ~/.papyrus/server.json)
   --bind <addr>  Address to bind (default 127.0.0.1; use Tailscale Serve or a
                  reverse proxy for remote access rather than a wide bind)
   --help         Show this help
+
+Commands:
+  serve          Start the server (default)
+  token rotate   Mint a new access token; all devices must re-enter it
 `;
 
 async function main() {
@@ -29,6 +35,19 @@ async function main() {
 		console.log(HELP);
 		return;
 	}
+
+	if (command === "token") {
+		if (positionals[1] !== "rotate") {
+			console.error(`Unknown token command: ${positionals[1] ?? ""}\n${HELP}`);
+			process.exit(1);
+		}
+		const { token, path } = rotateToken();
+		console.log("Token rotated. All devices must re-enter the new token.");
+		console.log(`New token (shown once): ${token}`);
+		console.log(`Stored at: ${path}`);
+		return;
+	}
+
 	if (command !== "serve") {
 		console.error(`Unknown command: ${command}\n${HELP}`);
 		process.exit(1);
