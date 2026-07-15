@@ -2,12 +2,14 @@ import type { FitAddon } from "@xterm/addon-fit";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal as XTerm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useIsMobile } from "renderer/hooks/useIsMobile";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { isWebShell } from "renderer/lib/is-web-shell";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
 import { getTerminalProfile } from "shared/terminal-profiles";
-import { SessionKilledOverlay } from "./components";
+import { SessionKilledOverlay, TerminalKeyBar } from "./components";
 import {
 	DEFAULT_TERMINAL_FONT_FAMILY,
 	DEFAULT_TERMINAL_FONT_SIZE,
@@ -250,6 +252,9 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	// Auto-retry connection with exponential backoff
 	const retryCountRef = useRef(0);
 	const MAX_RETRIES = 5;
+	// How long the page must have been hidden before we assume the platform
+	// (iOS Safari) may have killed the WebSocket and force a re-attach.
+	const HIDDEN_REATTACH_THRESHOLD_MS = 5_000;
 
 	// Stream handling
 	const { handleTerminalExit, handleStreamError, handleStreamData } =
@@ -309,6 +314,55 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		const timeout = setTimeout(handleRetryConnection, delay);
 		return () => clearTimeout(timeout);
 	}, [connectionError, handleRetryConnection]);
+
+	// Resubscribe/replay on visibilitychange (PHASE_3 §3 socket suspension):
+	// iOS Safari kills background WebSockets, and output produced while the
+	// socket was dead is lost (the daemon stream doesn't replay on subscribe).
+	// When the page returns to the foreground after a real suspension, wipe
+	// the buffer and re-attach — createOrAttach returns the daemon's snapshot,
+	// so the terminal comes back with full history. Web shell only; the
+	// desktop's sockets never suspend.
+	useEffect(() => {
+		if (!isWebShell()) return;
+		let hiddenAt: number | null = null;
+		const handleVisibilityResume = () => {
+			if (document.visibilityState === "hidden") {
+				hiddenAt = Date.now();
+				return;
+			}
+			const hiddenFor = hiddenAt === null ? 0 : Date.now() - hiddenAt;
+			hiddenAt = null;
+			if (isExitedRef.current || isRestoredModeRef.current) return;
+			// Quick tab flips with a healthy connection don't need a replay.
+			if (
+				hiddenFor < HIDDEN_REATTACH_THRESHOLD_MS &&
+				!connectionErrorRef.current
+			) {
+				return;
+			}
+			xtermRef.current?.reset();
+			retryCountRef.current = 0;
+			handleRetryConnection();
+		};
+		document.addEventListener("visibilitychange", handleVisibilityResume);
+		return () =>
+			document.removeEventListener("visibilitychange", handleVisibilityResume);
+	}, [handleRetryConnection]);
+
+	// iOS keyboard focus shim (PHASE_3 §3): tapping the terminal must reliably
+	// focus xterm's hidden textarea inside the touch gesture so the software
+	// keyboard comes up. Skipped implicitly on desktop (no touch events).
+	useEffect(() => {
+		const container = terminalRef.current;
+		if (!container) return;
+		const handleTouchEnd = () => {
+			const xterm = xtermRef.current;
+			if (!xterm || xterm.hasSelection()) return;
+			xterm.focus();
+		};
+		container.addEventListener("touchend", handleTouchEnd);
+		return () => container.removeEventListener("touchend", handleTouchEnd);
+	}, []);
 
 	const { isSearchOpen, setIsSearchOpen } = useTerminalHotkeys({
 		isFocused,
@@ -395,6 +449,31 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 
 	const terminalBg = terminalTheme?.background ?? getDefaultTerminalBg();
 
+	// Mobile on-screen key bar (Esc/Tab/sticky-Ctrl/arrows/Enter).
+	const isMobile = useIsMobile();
+	const handleKeyBarSend = useCallback(
+		(data: string) => {
+			if (
+				isExitedRef.current ||
+				isRestoredModeRef.current ||
+				connectionErrorRef.current
+			) {
+				return;
+			}
+			writeRef.current({ paneId, data });
+		},
+		[paneId, writeRef],
+	);
+	const handleKeyBarEscape = useCallback(() => {
+		const currentPane = useTabsStore.getState().panes[paneId];
+		if (
+			currentPane?.status === "working" ||
+			currentPane?.status === "permission"
+		) {
+			useTabsStore.getState().setPaneStatus(paneId, "idle");
+		}
+	}, [paneId]);
+
 	const handleDragOver = (event: React.DragEvent) => {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = "copy";
@@ -422,21 +501,29 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	return (
 		<div
 			role="application"
-			className="relative h-full w-full overflow-hidden"
+			className="flex h-full w-full flex-col overflow-hidden"
 			style={{ backgroundColor: terminalBg }}
 			onDragOver={handleDragOver}
 			onDrop={handleDrop}
 		>
-			<TerminalSearch
-				searchAddon={searchAddonRef.current}
-				isOpen={isSearchOpen}
-				onClose={() => setIsSearchOpen(false)}
-			/>
-			<ScrollToBottomButton terminal={xtermInstance} />
-			{exitStatus === "killed" && !connectionError && !isRestoredMode && (
-				<SessionKilledOverlay onRestart={restartTerminal} />
+			<div className="relative min-h-0 w-full flex-1 overflow-hidden">
+				<TerminalSearch
+					searchAddon={searchAddonRef.current}
+					isOpen={isSearchOpen}
+					onClose={() => setIsSearchOpen(false)}
+				/>
+				<ScrollToBottomButton terminal={xtermInstance} />
+				{exitStatus === "killed" && !connectionError && !isRestoredMode && (
+					<SessionKilledOverlay onRestart={restartTerminal} />
+				)}
+				<div ref={terminalRef} className="h-full w-full" />
+			</div>
+			{isMobile && (
+				<TerminalKeyBar
+					onSendKey={handleKeyBarSend}
+					onEscape={handleKeyBarEscape}
+				/>
 			)}
-			<div ref={terminalRef} className="h-full w-full" />
 		</div>
 	);
 };
