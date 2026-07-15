@@ -2,7 +2,10 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { localDb } from "@papyrus/server-core/local-db";
 import { getProviderKey } from "@papyrus/server-core/provider-keys";
-import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
+import {
+	getDaemonTerminalManager,
+	restartDaemon,
+} from "@papyrus/server-core/terminal";
 import { setOpenRouterKeyResolver } from "@papyrus/server-core/terminal/env";
 import {
 	setDaemonExecPathResolver,
@@ -204,6 +207,48 @@ export const terminalRouter = router({
 
 	listDaemonSessions: authedProcedure.query(async () => {
 		return terminal().listDaemonSessions();
+	}),
+
+	/**
+	 * Kill every live daemon session (the Terminal settings "Kill all sessions"
+	 * button). Mirrors the desktop procedure: kill each pane, then poll until the
+	 * daemon reports them gone so the UI's count is accurate.
+	 */
+	killAllDaemonSessions: authedProcedure.mutation(async () => {
+		const mgr = terminal();
+		const before = await mgr.listDaemonSessions();
+		const beforeIds = before.sessions
+			.filter((s) => s.isAlive)
+			.map((s) => s.sessionId);
+
+		if (beforeIds.length > 0) {
+			await Promise.allSettled(beforeIds.map((paneId) => mgr.kill({ paneId })));
+		}
+
+		const MAX_RETRIES = 10;
+		const RETRY_DELAY_MS = 100;
+		let remainingCount = beforeIds.length;
+		for (let i = 0; i < MAX_RETRIES && remainingCount > 0; i++) {
+			await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+			const after = await mgr.listDaemonSessions();
+			remainingCount = after.sessions.filter((s) => s.isAlive).length;
+		}
+
+		return {
+			killedCount: beforeIds.length - remainingCount,
+			remainingCount,
+		};
+	}),
+
+	/** Drop persisted scrollback used for reboot/crash recovery. */
+	clearTerminalHistory: authedProcedure.mutation(async () => {
+		await terminal().resetHistoryPersistence();
+		return { success: true };
+	}),
+
+	/** Restart the terminal daemon to recover from a stuck state (kills all). */
+	restartDaemon: authedProcedure.mutation(async () => {
+		return restartDaemon();
 	}),
 
 	/**

@@ -1,11 +1,14 @@
 import { router } from "../trpc";
-import { projectsRouter } from "./projects";
-import { settingsRouter, syncRouter } from "./stubs";
-import { workspacesRouter } from "./workspaces";
+import { changesRouter } from "./changes";
+import { configRouter } from "./config";
 import { filesystemRouter } from "./filesystem";
 import { healthRouter } from "./health";
-import { uiStateRouter } from "./ui-state";
+import { projectsRouter } from "./projects";
+import { resourceMetricsRouter } from "./resource-metrics";
+import { settingsRouter, syncRouter } from "./stubs";
 import { terminalRouter } from "./terminal";
+import { uiStateRouter } from "./ui-state";
+import { workspacesRouter } from "./workspaces";
 
 /**
  * The server router. Phase 1 extraction lands the desktop's core routers here
@@ -22,6 +25,9 @@ export const appRouter = router({
 	health: healthRouter,
 	terminal: terminalRouter,
 	uiState: uiStateRouter,
+	changes: changesRouter,
+	resourceMetrics: resourceMetricsRouter,
+	config: configRouter,
 });
 
 export type AppRouter = typeof appRouter;
