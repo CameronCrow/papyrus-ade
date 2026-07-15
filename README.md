@@ -61,6 +61,53 @@ bunx electron .            # launches the built app
 
 The headless server (`apps/server`) and browser UI (`apps/webui`) land in Phases 1–2 of the [plan](planning/PLAN_MAIN.md).
 
+## No-admin install (Windows)
+
+Everything Papyrus itself needs installs per-user — no elevation. The catch is picking the right installer at each step; the machine-wide variants all want admin.
+
+1. **Git** — use the per-user installer (or portable zip), then:
+
+   ```powershell
+   git config --global core.longpaths true
+   ```
+
+   The longpaths flag is required: agent checkouts live under `~/.papyrus/agents/<uuid>/worktree/`, and that prefix pushes deep repos past Windows' 260-char path limit. This git setting is enough — the system-wide registry toggle is not needed.
+
+2. **Node.js 24 (LTS)** — install via [fnm](https://github.com/Schniz/fnm) or extract the plain Node zip into a user directory. Avoid the Node MSI and nvm-windows: both need admin (nvm-windows symlinks into `C:\Program Files`).
+
+3. **Bun** — the official installer is user-level (`~/.bun`):
+
+   ```powershell
+   irm bun.sh/install.ps1 | iex
+   ```
+
+4. **Dependencies** — from the repo root:
+
+   ```powershell
+   bun install --ignore-scripts
+   ```
+
+   Then install better-sqlite3's prebuilt binding manually (bun's `--ignore-scripts` skips it):
+
+   ```powershell
+   cd (ls node_modules\.bun\better-sqlite3@*\node_modules\better-sqlite3).FullName
+   npx prebuild-install
+   ```
+
+   node-pty ships its prebuilds inside the package — no step needed. Everything lands in the project; nothing touches system paths. (This holds because Windows prebuilds exist for both native modules on Node 24 — if one were ever missing, compiling from source would need VS Build Tools, which does want admin.)
+
+5. **Build and run** — the server and daemon must run under Node, not bun:
+
+   ```powershell
+   cd apps\webui;  bun run build          # ~2 min
+   cd ..\server;   bun run scripts\build.ts
+   node dist\server.cjs serve --port 7777
+   ```
+
+   Open `http://localhost:7777` and enter the token from `~\.papyrus\token`. Binding to loopback on an unprivileged port means no firewall prompt and no elevation; ConPTY is built into Windows 10 1809+. The `claude` CLI installs per-user too (`npm i -g` under your user-writable Node).
+
+**What still needs admin (both outside Papyrus):** installing Tailscale for remote access (network driver), and approving the Windows Firewall prompt if you bind the server to a LAN address instead of loopback. Localhost-only Papyrus runs fully unelevated.
+
 ## How memory works
 
 Every Papyrus agent keeps a persistent, self-curated memory, adapted from the [Hermes agent](https://github.com/NousResearch/hermes-agent). The design is deliberately simple: plain markdown files the agent reads at the start of every session and writes back to as it learns. The files live outside the git worktree, so they survive branch and worktree churn and are never committed to your code.
