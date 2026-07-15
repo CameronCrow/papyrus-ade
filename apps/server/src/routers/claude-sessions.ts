@@ -52,7 +52,7 @@ export const claudeSessionsRouter = router({
 		.input(
 			z.object({
 				workspaceId: z.string(),
-				sessionId: z.string(),
+				sessionId: z.string().uuid(),
 				sourceRepoPath: z.string().optional(),
 			}),
 		)

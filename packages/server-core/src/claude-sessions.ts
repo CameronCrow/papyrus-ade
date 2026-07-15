@@ -664,11 +664,23 @@ async function carryOverMemory(
  * It does not clone the repo, create branches, or touch the worktree's git —
  * that is the caller's responsibility, done before import.
  */
+/** Every real session id is a UUID (the `.jsonl` transcript's own basename);
+ * reject anything else here too, not just at the tRPC boundary — this
+ * function is reused directly (e.g. by a future desktop-native caller, #28)
+ * and sessionId is interpolated into filesystem read/write paths below, so a
+ * non-UUID value is a path-traversal vector, not just a lookup miss. */
+const SESSION_ID_RE =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function importClaudeSession(
 	params: ImportClaudeSessionParams,
 ): Promise<ImportClaudeSessionResult> {
 	const { sessionId, sourceRepoPath, worktreePath, agentMemoryDir, agentHome } =
 		params;
+
+	if (!SESSION_ID_RE.test(sessionId)) {
+		throw new Error(`Invalid session id: ${sessionId}`);
+	}
 
 	// 1. Worktree must already exist as a git repo — never create git state.
 	if (!existsSync(worktreePath)) {
