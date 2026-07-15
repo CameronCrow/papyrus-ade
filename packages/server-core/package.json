@@ -21,6 +21,10 @@
 			"types": "./src/local-db/index.ts",
 			"default": "./src/local-db/index.ts"
 		},
+		"./notifications": {
+			"types": "./src/notifications/index.ts",
+			"default": "./src/notifications/index.ts"
+		},
 		"./*": {
 			"types": "./src/*.ts",
 			"default": "./src/*.ts"

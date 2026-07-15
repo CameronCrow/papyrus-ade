@@ -1,5 +1,6 @@
-import { createServer } from "node:http";
 import type { IncomingMessage, Server } from "node:http";
+import { createServer } from "node:http";
+import { startHookReceiver } from "@papyrus/server-core/notifications";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
@@ -90,14 +91,41 @@ export function startServer(config: ServerConfig): Promise<RunningServer> {
 			} else {
 				console.log(`Auth token: ${path}`);
 			}
-			resolve({
-				server,
-				close: () =>
-					new Promise<void>((res, rej) => {
-						wss.close();
-						server.close((e) => (e ? rej(e) : res()));
-					}),
-			});
+
+			// Run the agent hook receiver in the server process. Agent CLI hooks
+			// curl it at 127.0.0.1:$SUPERSET_PORT/hook/complete (SUPERSET_PORT is
+			// injected into every terminal session by buildTerminalEnv and equals
+			// DESKTOP_NOTIFICATIONS_PORT), and it re-emits AGENT_LIFECYCLE events
+			// that the notifications tRPC subscription streams to web clients.
+			startHookReceiver()
+				.then((hookReceiver) => {
+					resolve({
+						server,
+						close: () =>
+							new Promise<void>((res, rej) => {
+								wss.close();
+								void hookReceiver.close().finally(() => {
+									server.close((e) => (e ? rej(e) : res()));
+								});
+							}),
+					});
+				})
+				.catch((err) => {
+					// A busy hook port must not take down the whole server (e.g. a
+					// desktop instance already owns it). Log and run without it.
+					console.error(
+						"[notifications] hook receiver failed to start; agent attention events will not reach web clients:",
+						err,
+					);
+					resolve({
+						server,
+						close: () =>
+							new Promise<void>((res, rej) => {
+								wss.close();
+								server.close((e) => (e ? rej(e) : res()));
+							}),
+					});
+				});
 		});
 	});
 }
