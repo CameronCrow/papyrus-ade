@@ -21,7 +21,7 @@ interface AgentFileEntry {
 	/** Display label (e.g. "AGENT.md", "memories/foo.md", "skills/x/SKILL.md"). */
 	label: string;
 	/** Coarse grouping for the UI. */
-	group: "Memory" | "Skills" | "Worktree";
+	group: "Memory" | "Skills" | "Worktree" | "Imported";
 	/** Absolute path on disk. */
 	absolutePath: string;
 	/** Worktree-relative path when the file lives inside the worktree, else null. */
@@ -117,6 +117,26 @@ function collectAgentFiles(agentId: string): AgentFileEntry[] {
 			absolutePath: claudeMd,
 			relativeToWorktree: "CLAUDE.md",
 		});
+	}
+
+	// Imported native-Claude-session transcripts (issue #27), rendered as
+	// read-only Markdown under <agent-home>/imported/.
+	const importedDir = join(getAgentHome(agentId), "imported");
+	if (existsSync(importedDir)) {
+		try {
+			for (const name of readdirSync(importedDir)) {
+				if (name.endsWith(".md")) {
+					entries.push({
+						label: `imported/${name}`,
+						group: "Imported",
+						absolutePath: join(importedDir, name),
+						relativeToWorktree: null,
+					});
+				}
+			}
+		} catch {
+			// ignore unreadable imported dir
+		}
 	}
 
 	return entries;

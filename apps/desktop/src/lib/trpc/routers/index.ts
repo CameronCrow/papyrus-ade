@@ -6,6 +6,7 @@ import { createBrowserRouter } from "./browser/browser";
 import { createBrowserHistoryRouter } from "./browser-history";
 import { createCacheRouter } from "./cache";
 import { createChangesRouter } from "./changes";
+import { createClaudeSessionsRouter } from "./claude-sessions";
 import { createConfigRouter } from "./config";
 import { createExternalRouter } from "./external";
 import { createFilesystemRouter } from "./filesystem";
@@ -36,6 +37,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		workspaces: createWorkspacesRouter(),
 		terminal: createTerminalRouter(),
 		changes: createChangesRouter(),
+		claudeSessions: createClaudeSessionsRouter(),
 		filesystem: createFilesystemRouter(),
 		notifications: createNotificationsRouter(),
 		permissions: createPermissionsRouter(),
