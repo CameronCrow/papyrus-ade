@@ -24,6 +24,24 @@ export interface AgentRepoResult {
 }
 
 /**
+ * Git clone options that enable long paths on Windows (issue #11).
+ *
+ * On stock Windows the default MAX_PATH of 260 chars, plus the deep
+ * `~/.papyrus/agents/<uuid>/worktree/` prefix (~60 chars), overflows for repos
+ * with long nested paths and the checkout fails with "Filename too long"
+ * (papyrus-ade itself trips this). `git clone --config core.longpaths=true`
+ * applies the config in the newly-created repo BEFORE the working tree is
+ * checked out, and persists it in the repo's LOCAL config so every later
+ * operation (checkout, `worktree add`, reset) inherits it — without depending
+ * on the user's global git config. Returns an empty list off win32.
+ */
+export function longpathsCloneOptions(
+	platform: NodeJS.Platform = process.platform,
+): string[] {
+	return platform === "win32" ? ["--config", "core.longpaths=true"] : [];
+}
+
+/**
  * Build an Agent's standalone repo + home layout on disk (Papyrus Phase B, risk #1).
  *
  * Unlike the shared-repo model (`git worktree add` off a project's
@@ -65,7 +83,7 @@ export async function setupAgentRepo({
 
 	let branch: string;
 	if (source.type === "clone") {
-		await simpleGit().clone(source.url, worktreePath);
+		await simpleGit().clone(source.url, worktreePath, longpathsCloneOptions());
 		branch =
 			(await simpleGit(worktreePath)
 				.revparse(["--abbrev-ref", "HEAD"])
@@ -78,6 +96,12 @@ export async function setupAgentRepo({
 			await git.init(["--initial-branch=main"]);
 		} catch {
 			await git.init();
+		}
+		// Long paths on Windows (issue #11): match the clone path so deep paths
+		// written into a fresh agent repo (scaffold, later checkout/worktree add)
+		// don't overflow MAX_PATH. Kept local to the repo, not the global config.
+		if (process.platform === "win32") {
+			await git.addConfig("core.longpaths", "true", false, "local");
 		}
 		// Set a local identity so the empty initial commit works even when the
 		// machine has no global git user configured. Fresh agent repos are
