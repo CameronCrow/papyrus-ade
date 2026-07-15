@@ -44,7 +44,7 @@ To stop publishing: `tailscale serve --https=443 off`.
 
 If you won't run Tailscale and only need access from the same local network, put
 [Caddy](https://caddyserver.com) in front for TLS and bind the server to the LAN
-interface. Adapt the repo's `Caddyfile.example`:
+interface. Create a `Caddyfile` next to wherever you run the server:
 
 ```
 your-machine.local {

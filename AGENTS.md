@@ -12,9 +12,9 @@ Bun + Turbo monorepo with:
 - **Apps (active)**:
   - `apps/desktop` - Electron desktop application (the current product)
   - `apps/docs` - Documentation site
-- **Apps (quarantined — upstream Superset cloud product, NOT in the workspace
-  graph, do not build on):** `apps/web`, `apps/api`, `apps/mobile`,
-  `apps/admin`, `apps/marketing`, `apps/streams`
+- **Apps (deleted)**: the upstream Superset cloud product (`apps/web`,
+  `apps/api`, `apps/mobile`, `apps/admin`, `apps/marketing`, `apps/streams`)
+  was quarantined in Phase 0 and deleted post-M1 — do not resurrect it
 - **Packages**:
   - `packages/ui` - Shared UI components (shadcn/ui + TailwindCSS v4).
     - Add components: `npx shadcn@latest add <component>` (run in `packages/ui/`)
@@ -37,7 +37,8 @@ Bun + Turbo monorepo with:
 - **Package Manager**: Bun (no npm/yarn/pnpm)
 - **Build System**: Turborepo
 - **Database**: SQLite via `packages/local-db` (Drizzle). The Neon PostgreSQL
-  setup in `packages/db` belongs to the quarantined cloud apps.
+  setup in `packages/db` belonged to the deleted cloud apps; the package is
+  kept only because the desktop renderer still imports its types.
 - **UI**: React + TailwindCSS v4 + shadcn/ui
 - **Code Quality**: Biome (formatting + linting at root)
 
