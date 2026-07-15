@@ -1,4 +1,6 @@
 import { createRequire } from "node:module";
+import { join } from "node:path";
+import { localDb } from "@papyrus/server-core/local-db";
 import { getProviderKey } from "@papyrus/server-core/provider-keys";
 import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
 import { setOpenRouterKeyResolver } from "@papyrus/server-core/terminal/env";
@@ -7,12 +9,11 @@ import {
 	setDaemonScriptPathResolver,
 } from "@papyrus/server-core/terminal-host/client";
 import { workspaces, worktrees } from "@superset/local-db";
-import { localDb } from "@papyrus/server-core/local-db";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
-import { join } from "node:path";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
+import { getWriterLeaseRegistry } from "../writer-lease";
 
 // The daemon runs under plain Node from a CJS bundle (see scripts/build.ts),
 // where it sits next to server.cjs in dist/. import.meta.url is undefined in
@@ -25,7 +26,9 @@ const daemonBundle =
 				"@papyrus/server-core/terminal-host/daemon",
 			);
 setDaemonScriptPathResolver(() => daemonBundle);
-setDaemonExecPathResolver(() => (process.versions.bun ? "node" : process.execPath));
+setDaemonExecPathResolver(() =>
+	process.versions.bun ? "node" : process.execPath,
+);
 
 // Inject the stored OpenRouter key into agent terminals (kimi/minimax/glm run
 // Claude Code pointed at OpenRouter). Decrypted server-side only.
@@ -33,6 +36,14 @@ setOpenRouterKeyResolver(() => getProviderKey("openrouter"));
 
 function terminal() {
 	return getDaemonTerminalManager();
+}
+
+// Multi-device attach policy (issue #7, mirror-readonly v1): per pane, the
+// first attaching client holds the writer lease; concurrent attaches from
+// other clients get a live read-only mirror. See ../writer-lease.ts for the
+// full lifecycle semantics.
+function leases() {
+	return getWriterLeaseRegistry();
 }
 
 /** Resolve a workspace's on-disk worktree path for cwd defaulting. */
@@ -70,6 +81,7 @@ export const terminalRouter = router({
 				skipColdRestore: z.boolean().optional(),
 				allowKilled: z.boolean().optional(),
 				themeType: z.enum(["dark", "light"]).optional(),
+				clientId: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -93,6 +105,11 @@ export const terminalRouter = router({
 				themeType: input.themeType,
 				runtime: ws?.runtime ?? null,
 			});
+			// Lease decision only after a successful attach; anonymous callers
+			// (no clientId) don't participate in the policy.
+			const readOnly = input.clientId
+				? leases().attach(input.paneId, input.clientId).readOnly
+				: false;
 			return {
 				paneId: input.paneId,
 				isNew: result.isNew,
@@ -102,13 +119,23 @@ export const terminalRouter = router({
 				previousCwd: result.previousCwd,
 				claudeSessionId: result.claudeSessionId,
 				snapshot: result.snapshot,
+				readOnly,
 			};
 		}),
 
 	write: authedProcedure
-		.input(z.object({ paneId: z.string(), data: z.string() }))
+		.input(
+			z.object({
+				paneId: z.string(),
+				data: z.string(),
+				clientId: z.string().optional(),
+			}),
+		)
 		.mutation(({ input }) => {
-			terminal().write(input);
+			// Mirrored clients' input is dropped server-side; their UI also
+			// suppresses it locally, so this is the defense-in-depth layer.
+			if (!leases().allowWrite(input.paneId, input.clientId)) return;
+			terminal().write({ paneId: input.paneId, data: input.data });
 		}),
 
 	resize: authedProcedure
@@ -117,28 +144,56 @@ export const terminalRouter = router({
 				paneId: z.string(),
 				cols: z.number().int().min(1).max(1000),
 				rows: z.number().int().min(1).max(1000),
+				clientId: z.string().optional(),
 			}),
 		)
 		.mutation(({ input }) => {
-			terminal().resize(input);
+			// The writer's viewport owns the PTY dimensions; mirror resizes
+			// (window drags on a read-only device) are ignored.
+			if (!leases().allowResize(input.paneId, input.clientId)) return;
+			terminal().resize({
+				paneId: input.paneId,
+				cols: input.cols,
+				rows: input.rows,
+			});
 		}),
 
 	signal: authedProcedure
-		.input(z.object({ paneId: z.string(), signal: z.string().optional() }))
+		.input(
+			z.object({
+				paneId: z.string(),
+				signal: z.string().optional(),
+				clientId: z.string().optional(),
+			}),
+		)
 		.mutation(({ input }) => {
-			terminal().signal(input);
+			if (!leases().allowWrite(input.paneId, input.clientId)) return;
+			terminal().signal({ paneId: input.paneId, signal: input.signal });
+		}),
+
+	/**
+	 * Explicit takeover from a mirrored client (last-writer-wins on user
+	 * action). The demoted writer learns via a `mode` event on its stream.
+	 */
+	takeWriter: authedProcedure
+		.input(z.object({ paneId: z.string(), clientId: z.string() }))
+		.mutation(({ input }) => {
+			leases().takeOver(input.paneId, input.clientId);
+			return { readOnly: false };
 		}),
 
 	kill: authedProcedure
 		.input(z.object({ paneId: z.string() }))
 		.mutation(async ({ input }) => {
 			await terminal().kill({ paneId: input.paneId });
+			leases().clear(input.paneId);
 		}),
 
 	detach: authedProcedure
-		.input(z.object({ paneId: z.string() }))
+		.input(z.object({ paneId: z.string(), clientId: z.string().optional() }))
 		.mutation(({ input }) => {
-			terminal().detach(input);
+			terminal().detach({ paneId: input.paneId });
+			if (input.clientId) leases().release(input.paneId, input.clientId);
 		}),
 
 	clearScrollback: authedProcedure
@@ -154,41 +209,75 @@ export const terminalRouter = router({
 	/**
 	 * Per-pane stream. Exit is a state transition, NOT stream completion
 	 * (paneId is reused across restarts) — matches the desktop invariant.
+	 *
+	 * The object input form carries the attach-policy clientId: it binds the
+	 * subscription as the client's liveness signal for the writer lease and
+	 * enables `mode` events (initial + on every lease change). The plain
+	 * string form stays supported for scripts and older clients.
 	 */
-	stream: authedProcedure.input(z.string()).subscription(({ input: paneId }) =>
-		observable<
-			| { type: "data"; data: string }
-			| {
-					type: "exit";
-					exitCode: number;
-					signal?: number;
-					reason?: "killed" | "exited" | "error";
-			  }
-			| { type: "disconnect"; reason: string }
-			| { type: "error"; error: string; code?: string }
-		>((emit) => {
-			const mgr = terminal();
-			const onData = (data: string) => emit.next({ type: "data", data });
-			const onExit = (
-				exitCode: number,
-				signal?: number,
-				reason?: "killed" | "exited" | "error",
-			) => emit.next({ type: "exit", exitCode, signal, reason });
-			const onDisconnect = (reason: string) =>
-				emit.next({ type: "disconnect", reason });
-			const onError = (payload: { error: string; code?: string }) =>
-				emit.next({ type: "error", error: payload.error, code: payload.code });
+	stream: authedProcedure
+		.input(
+			z.union([
+				z.string(),
+				z.object({ paneId: z.string(), clientId: z.string().optional() }),
+			]),
+		)
+		.subscription(({ input }) => {
+			const paneId = typeof input === "string" ? input : input.paneId;
+			const clientId = typeof input === "string" ? undefined : input.clientId;
+			return observable<
+				| { type: "data"; data: string }
+				| {
+						type: "exit";
+						exitCode: number;
+						signal?: number;
+						reason?: "killed" | "exited" | "error";
+				  }
+				| { type: "disconnect"; reason: string }
+				| { type: "error"; error: string; code?: string }
+				| { type: "mode"; readOnly: boolean }
+			>((emit) => {
+				const mgr = terminal();
+				const onData = (data: string) => emit.next({ type: "data", data });
+				const onExit = (
+					exitCode: number,
+					signal?: number,
+					reason?: "killed" | "exited" | "error",
+				) => emit.next({ type: "exit", exitCode, signal, reason });
+				const onDisconnect = (reason: string) =>
+					emit.next({ type: "disconnect", reason });
+				const onError = (payload: { error: string; code?: string }) =>
+					emit.next({
+						type: "error",
+						error: payload.error,
+						code: payload.code,
+					});
 
-			mgr.on(`data:${paneId}`, onData);
-			mgr.on(`exit:${paneId}`, onExit);
-			mgr.on(`disconnect:${paneId}`, onDisconnect);
-			mgr.on(`error:${paneId}`, onError);
-			return () => {
-				mgr.off(`data:${paneId}`, onData);
-				mgr.off(`exit:${paneId}`, onExit);
-				mgr.off(`disconnect:${paneId}`, onDisconnect);
-				mgr.off(`error:${paneId}`, onError);
-			};
+				mgr.on(`data:${paneId}`, onData);
+				mgr.on(`exit:${paneId}`, onExit);
+				mgr.on(`disconnect:${paneId}`, onDisconnect);
+				mgr.on(`error:${paneId}`, onError);
+
+				let unbindLease: (() => void) | undefined;
+				if (clientId) {
+					const emitMode = () =>
+						emit.next({
+							type: "mode",
+							readOnly: leases().isReadOnly(paneId, clientId),
+						});
+					unbindLease = leases().bindSubscription(paneId, clientId, emitMode);
+					// Tell the client where it stands right away — the renderer
+					// gates its input purely on these events.
+					emitMode();
+				}
+
+				return () => {
+					mgr.off(`data:${paneId}`, onData);
+					mgr.off(`exit:${paneId}`, onExit);
+					mgr.off(`disconnect:${paneId}`, onDisconnect);
+					mgr.off(`error:${paneId}`, onError);
+					unbindLease?.();
+				};
+			});
 		}),
-	),
 });

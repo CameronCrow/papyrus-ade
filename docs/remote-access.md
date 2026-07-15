@@ -71,6 +71,27 @@ where you can.
 - **Do not** commit or paste your token. Rotate it (delete `~/.papyrus/token`
   and restart the server) if it is ever exposed.
 
+## Multiple devices at once (mirror-readonly)
+
+Any number of browsers can open the same workspace simultaneously; terminal
+panes follow a **single-writer, mirror-readonly** policy:
+
+- The first device to open a pane is its **writer** — its keyboard drives the
+  terminal.
+- Every other device attached to that pane gets a **live read-only mirror**:
+  it sees all output in real time, but its input is ignored (locally and
+  server-side). A small **"View only · Take control"** badge appears over the
+  terminal.
+- Tapping the badge takes over writing immediately (last-writer-wins on
+  explicit action); the previous writer flips to view-only at the same moment.
+- Closing the writer's tab — or losing its connection — frees the pane. The
+  next device to type or re-attach becomes the writer, so **refreshing the
+  page never locks you out of your own terminal**.
+
+The policy is per pane: you can drive one terminal from your phone while a
+laptop drives another in the same workspace. The desktop Electron app is a
+single client and is unaffected.
+
 ## iPhone (PWA)
 
 Once the server is reachable over HTTPS (Tailscale or Caddy), open the URL in

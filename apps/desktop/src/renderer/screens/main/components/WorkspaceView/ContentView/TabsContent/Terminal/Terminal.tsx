@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useIsMobile } from "renderer/hooks/useIsMobile";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { isWebShell } from "renderer/lib/is-web-shell";
+import { terminalClientId } from "renderer/lib/terminal-client-id";
+import { electronTrpcClient } from "renderer/lib/trpc-client";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
 import { getTerminalProfile } from "shared/terminal-profiles";
@@ -101,6 +103,12 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		return globalTerminalTheme;
 	})();
 
+	// Multi-device attach policy (issue #7): true while another device holds
+	// this pane's writer lease. Driven purely by server `mode` stream events
+	// (the desktop router never emits them, so Electron never mirrors).
+	const [isReadOnly, setIsReadOnly] = useState(false);
+	const readOnlyRef = useRef(false);
+
 	// Terminal connection state and mutations
 	const {
 		connectionError,
@@ -113,7 +121,7 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 			detach: detachRef,
 			clearScrollback: clearScrollbackRef,
 		},
-	} = useTerminalConnection({ workspaceId });
+	} = useTerminalConnection({ workspaceId, readOnlyRef });
 
 	// Terminal CWD management
 	const { updateCwdFromData } = useTerminalCwd({
@@ -275,26 +283,38 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	handleTerminalExitRef.current = handleTerminalExit;
 	handleStreamErrorRef.current = handleStreamError;
 
-	// Stream subscription
-	electronTrpc.terminal.stream.useSubscription(paneId, {
-		onData: (event) => {
-			if (connectionErrorRef.current && event.type === "data") {
-				setConnectionError(null);
-				retryCountRef.current = 0;
-			}
-			handleStreamData(event);
+	// Stream subscription. The clientId binds this subscription as our
+	// liveness signal for the writer lease on papyrus-server (issue #7).
+	electronTrpc.terminal.stream.useSubscription(
+		{ paneId, clientId: terminalClientId },
+		{
+			onData: (event) => {
+				// Writer/mirror status — handled here, never queued/replayed.
+				if (event.type === "mode") {
+					readOnlyRef.current = event.readOnly;
+					setIsReadOnly(event.readOnly);
+					return;
+				}
+				if (connectionErrorRef.current && event.type === "data") {
+					setConnectionError(null);
+					retryCountRef.current = 0;
+				}
+				handleStreamData(event);
+			},
+			onError: (error) => {
+				console.error("[Terminal] Stream subscription error:", {
+					paneId,
+					error: error instanceof Error ? error.message : String(error),
+				});
+				setConnectionError(
+					error instanceof Error
+						? error.message
+						: "Connection to terminal lost",
+				);
+			},
+			enabled: true,
 		},
-		onError: (error) => {
-			console.error("[Terminal] Stream subscription error:", {
-				paneId,
-				error: error instanceof Error ? error.message : String(error),
-			});
-			setConnectionError(
-				error instanceof Error ? error.message : "Connection to terminal lost",
-			);
-		},
-		enabled: true,
-	});
+	);
 
 	// Auto-retry when connection error is set
 	useEffect(() => {
@@ -464,6 +484,17 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		},
 		[paneId, writeRef],
 	);
+	// Multi-device attach policy (issue #7): explicit last-writer-wins
+	// takeover from a mirrored client. The server transfers the lease and
+	// flips both clients' modes via stream `mode` events.
+	const handleTakeControl = useCallback(() => {
+		electronTrpcClient.terminal.takeWriter
+			.mutate({ paneId, clientId: terminalClientId })
+			.catch((error) => {
+				console.warn("[Terminal] Failed to take terminal control:", error);
+			});
+	}, [paneId]);
+
 	const handleKeyBarEscape = useCallback(() => {
 		const currentPane = useTabsStore.getState().panes[paneId];
 		if (
@@ -513,6 +544,16 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 					onClose={() => setIsSearchOpen(false)}
 				/>
 				<ScrollToBottomButton terminal={xtermInstance} />
+				{isReadOnly && (
+					<button
+						type="button"
+						onClick={handleTakeControl}
+						title="Another device is typing in this terminal. Click to take control."
+						className="absolute top-1.5 right-2 z-10 rounded-full border border-white/15 bg-black/60 px-2.5 py-0.5 text-[11px] font-medium text-white/75 backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-white"
+					>
+						View only · Take control
+					</button>
+				)}
 				{exitStatus === "killed" && !connectionError && !isRestoredMode && (
 					<SessionKilledOverlay onRestart={restartTerminal} />
 				)}
