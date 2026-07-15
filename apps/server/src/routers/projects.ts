@@ -1,4 +1,9 @@
-import { projects, workspaces } from "@superset/local-db";
+import {
+	BRANCH_PREFIX_MODES,
+	EXTERNAL_APPS,
+	projects,
+	workspaces,
+} from "@superset/local-db";
 import { localDb } from "@papyrus/server-core/local-db";
 import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
 import {
@@ -7,7 +12,18 @@ import {
 } from "@papyrus/server-core/workspaces/db-helpers";
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
+import simpleGit from "simple-git";
 import { z } from "zod/v4";
+import {
+	getDefaultBranch,
+	getGitAuthorName,
+	refreshDefaultBranch,
+	sanitizeAuthorPrefix,
+} from "../lib/git";
+import {
+	deleteProjectIcon,
+	saveProjectIconFromDataUrl,
+} from "../lib/project-icons";
 import { authedProcedure, router } from "../trpc";
 
 /**
@@ -76,12 +92,12 @@ export const projectsRouter = router({
 				patch: z.object({
 					name: z.string().trim().min(1).optional(),
 					color: z.string().optional(),
-					branchPrefixMode: z.string().nullable().optional(),
+					branchPrefixMode: z.enum(BRANCH_PREFIX_MODES).nullable().optional(),
 					branchPrefixCustom: z.string().nullable().optional(),
 					workspaceBaseBranch: z.string().nullable().optional(),
 					worktreeBaseDir: z.string().nullable().optional(),
 					hideImage: z.boolean().optional(),
-					defaultApp: z.string().nullable().optional(),
+					defaultApp: z.enum(EXTERNAL_APPS).nullable().optional(),
 				}),
 			}),
 		)
@@ -102,8 +118,23 @@ export const projectsRouter = router({
 				.set({
 					...(input.patch.name !== undefined && { name: input.patch.name }),
 					...(input.patch.color !== undefined && { color: input.patch.color }),
+					...(input.patch.branchPrefixMode !== undefined && {
+						branchPrefixMode: input.patch.branchPrefixMode,
+					}),
+					...(input.patch.branchPrefixCustom !== undefined && {
+						branchPrefixCustom: input.patch.branchPrefixCustom,
+					}),
+					...(input.patch.workspaceBaseBranch !== undefined && {
+						workspaceBaseBranch: input.patch.workspaceBaseBranch,
+					}),
+					...(input.patch.worktreeBaseDir !== undefined && {
+						worktreeBaseDir: input.patch.worktreeBaseDir,
+					}),
 					...(input.patch.hideImage !== undefined && {
 						hideImage: input.patch.hideImage,
+					}),
+					...(input.patch.defaultApp !== undefined && {
+						defaultApp: input.patch.defaultApp,
 					}),
 					lastOpenedAt: Date.now(),
 				})
@@ -184,5 +215,245 @@ export const projectsRouter = router({
 						? `${totalFailed} terminal process(es) may still be running`
 						: undefined,
 			};
+		}),
+
+	getBranches: authedProcedure
+		.input(z.object({ projectId: z.string() }))
+		.query(
+			async ({
+				input,
+			}): Promise<{
+				branches: Array<{
+					name: string;
+					lastCommitDate: number;
+					isLocal: boolean;
+					isRemote: boolean;
+				}>;
+				defaultBranch: string;
+			}> => {
+				const project = localDb
+					.select()
+					.from(projects)
+					.where(eq(projects.id, input.projectId))
+					.get();
+				if (!project) {
+					throw new Error(`Project ${input.projectId} not found`);
+				}
+				// Papyrus categories have no shared repo to list branches from.
+				if (!project.mainRepoPath) {
+					return { branches: [], defaultBranch: "main" };
+				}
+
+				const git = simpleGit(project.mainRepoPath);
+
+				let hasOrigin = false;
+				try {
+					const remotes = await git.getRemotes();
+					hasOrigin = remotes.some((r) => r.name === "origin");
+				} catch {}
+
+				const branchSummary = await git.branch(["-a"]);
+
+				const localBranchSet = new Set<string>();
+				const remoteBranchSet = new Set<string>();
+
+				for (const name of Object.keys(branchSummary.branches)) {
+					if (name.startsWith("remotes/origin/")) {
+						if (name === "remotes/origin/HEAD") continue;
+						remoteBranchSet.add(name.replace("remotes/origin/", ""));
+					} else {
+						localBranchSet.add(name);
+					}
+				}
+
+				const branchMap = new Map<
+					string,
+					{ lastCommitDate: number; isLocal: boolean; isRemote: boolean }
+				>();
+
+				if (hasOrigin) {
+					try {
+						const remoteBranchInfo = await git.raw([
+							"for-each-ref",
+							"--sort=-committerdate",
+							"--format=%(refname:short) %(committerdate:unix)",
+							"refs/remotes/origin/",
+						]);
+
+						for (const line of remoteBranchInfo.trim().split("\n")) {
+							if (!line) continue;
+							const lastSpaceIdx = line.lastIndexOf(" ");
+							let branch = line.substring(0, lastSpaceIdx);
+							const timestamp = Number.parseInt(
+								line.substring(lastSpaceIdx + 1),
+								10,
+							);
+
+							if (branch.startsWith("origin/")) {
+								branch = branch.replace("origin/", "");
+							}
+							if (branch === "HEAD") continue;
+
+							branchMap.set(branch, {
+								lastCommitDate: timestamp * 1000,
+								isLocal: localBranchSet.has(branch),
+								isRemote: true,
+							});
+						}
+					} catch {
+						for (const name of remoteBranchSet) {
+							branchMap.set(name, {
+								lastCommitDate: 0,
+								isLocal: localBranchSet.has(name),
+								isRemote: true,
+							});
+						}
+					}
+				}
+
+				try {
+					const localBranchInfo = await git.raw([
+						"for-each-ref",
+						"--sort=-committerdate",
+						"--format=%(refname:short) %(committerdate:unix)",
+						"refs/heads/",
+					]);
+
+					for (const line of localBranchInfo.trim().split("\n")) {
+						if (!line) continue;
+						const lastSpaceIdx = line.lastIndexOf(" ");
+						const branch = line.substring(0, lastSpaceIdx);
+						const timestamp = Number.parseInt(
+							line.substring(lastSpaceIdx + 1),
+							10,
+						);
+
+						if (branch === "HEAD") continue;
+
+						// Remote takes precedence for date
+						if (!branchMap.has(branch)) {
+							branchMap.set(branch, {
+								lastCommitDate: timestamp * 1000,
+								isLocal: true,
+								isRemote: remoteBranchSet.has(branch),
+							});
+						} else {
+							const existing = branchMap.get(branch);
+							if (existing) {
+								existing.isLocal = true;
+							}
+						}
+					}
+				} catch {
+					for (const name of localBranchSet) {
+						if (!branchMap.has(name)) {
+							branchMap.set(name, {
+								lastCommitDate: 0,
+								isLocal: true,
+								isRemote: remoteBranchSet.has(name),
+							});
+						}
+					}
+				}
+
+				const branches = Array.from(branchMap.entries()).map(
+					([name, data]) => ({ name, ...data }),
+				);
+
+				// Sync with remote in case the default branch changed (e.g. master -> main)
+				const remoteDefaultBranch = await refreshDefaultBranch(
+					project.mainRepoPath,
+				);
+
+				const defaultBranch =
+					remoteDefaultBranch ||
+					project.defaultBranch ||
+					(await getDefaultBranch(project.mainRepoPath));
+
+				if (defaultBranch !== project.defaultBranch) {
+					localDb
+						.update(projects)
+						.set({ defaultBranch })
+						.where(eq(projects.id, input.projectId))
+						.run();
+				}
+
+				// Sort: default branch first, then by date
+				branches.sort((a, b) => {
+					if (a.name === defaultBranch) return -1;
+					if (b.name === defaultBranch) return 1;
+					return b.lastCommitDate - a.lastCommitDate;
+				});
+
+				return { branches, defaultBranch };
+			},
+		),
+
+	getGitAuthor: authedProcedure
+		.input(z.object({ id: z.string() }))
+		.query(async ({ input }) => {
+			const project = localDb
+				.select()
+				.from(projects)
+				.where(eq(projects.id, input.id))
+				.get();
+			if (!project) {
+				return null;
+			}
+
+			// Repo-less categories fall back to the global git identity.
+			const authorName = await getGitAuthorName(
+				project.mainRepoPath || undefined,
+			);
+			if (!authorName) {
+				return null;
+			}
+
+			return {
+				name: authorName,
+				prefix: sanitizeAuthorPrefix(authorName),
+			};
+		}),
+
+	setProjectIcon: authedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				icon: z.string().nullable(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const project = localDb
+				.select()
+				.from(projects)
+				.where(eq(projects.id, input.id))
+				.get();
+			if (!project) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: `Project ${input.id} not found`,
+				});
+			}
+
+			if (input.icon === null) {
+				deleteProjectIcon(input.id);
+				localDb
+					.update(projects)
+					.set({ iconUrl: null })
+					.where(eq(projects.id, input.id))
+					.run();
+				return { iconUrl: null };
+			}
+
+			const iconUrl = await saveProjectIconFromDataUrl({
+				projectId: input.id,
+				dataUrl: input.icon,
+			});
+			localDb
+				.update(projects)
+				.set({ iconUrl })
+				.where(eq(projects.id, input.id))
+				.run();
+			return { iconUrl };
 		}),
 });
