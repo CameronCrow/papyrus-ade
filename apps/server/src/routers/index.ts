@@ -1,5 +1,6 @@
 import { router } from "../trpc";
 import { changesRouter } from "./changes";
+import { claudeSessionsRouter } from "./claude-sessions";
 import { configRouter } from "./config";
 import { externalRouter } from "./external";
 import { filesystemRouter } from "./filesystem";
@@ -32,6 +33,7 @@ export const appRouter = router({
 	resourceMetrics: resourceMetricsRouter,
 	config: configRouter,
 	external: externalRouter,
+	claudeSessions: claudeSessionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -37,7 +37,7 @@ import { authedProcedure, router } from "../trpc";
 /** One entry in an agent's memory/skill surface (mirrors the desktop shape). */
 interface AgentFileEntry {
 	label: string;
-	group: "Memory" | "Skills" | "Worktree";
+	group: "Memory" | "Skills" | "Worktree" | "Imported";
 	absolutePath: string;
 	relativeToWorktree: string | null;
 }
@@ -129,6 +129,26 @@ function collectAgentFiles(agentId: string): AgentFileEntry[] {
 			absolutePath: claudeMd,
 			relativeToWorktree: "CLAUDE.md",
 		});
+	}
+
+	// Imported native-Claude-session transcripts (issue #27). Rendered Markdown
+	// under <agent-home>/imported/ — kept separate from the agent's live history.
+	const importedDir = join(getAgentHome(agentId), "imported");
+	if (existsSync(importedDir)) {
+		try {
+			for (const name of readdirSync(importedDir)) {
+				if (name.endsWith(".md")) {
+					entries.push({
+						label: `imported/${name}`,
+						group: "Imported",
+						absolutePath: join(importedDir, name),
+						relativeToWorktree: null,
+					});
+				}
+			}
+		} catch {
+			// ignore unreadable imported dir
+		}
 	}
 
 	return entries;
