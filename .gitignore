@@ -84,6 +84,11 @@ superset-dev-data/
 **/graphify-out/cost.json
 **/graphify-out/.graphify_detect.err
 **/graphify-out/.graphify_python
+**/graphify-out/.graphify_root
+**/graphify-out/.commits_since_update
+**/graphify-out/.needs_update
+**/graphify-out/.hook_update.log
+**/graphify-out/20*/
 
 # Codex workspace config (track only shared config/symlinks; ignore runtime state)
 .codex/*
