@@ -6,11 +6,24 @@ import { SUPERSET_DIR_NAME } from "../constants";
 /**
  * Terminal-host IPC endpoint (D6).
  *
- * posix: unix socket at ~/.papyrus[-<ws>]/terminal-host.sock (chmod 600).
- * win32: named pipe \\.\pipe\papyrus[-<ws>]-terminal-host-<user>. Pipes have
- * no filesystem file: they are per-user ACL'd by default, cannot be
- * chmod'ed or unlinked, and vanish when the server closes. existsSync DOES
- * work against the \\.\pipe\ namespace, so liveness probes stay uniform.
+ * posix: unix socket at ~/.papyrus[-<ws>]/terminal-host.sock, created inside a
+ * 0700 owner-only dir and chmod'ed to 0600 after listen (see daemon startup).
+ * A unix domain socket is never bound to a TCP port, so it is not
+ * network-reachable; the 0700 dir + 0600 socket keep it owner-only.
+ *
+ * win32: named pipe \\.\pipe\papyrus[-<ws>]-terminal-host-<user>. The pipe name
+ * embeds the user, but SECURITY NOTE: the pipe's DACL is libuv's default, which
+ * grants FILE_GENERIC_READ to Everyone (WD) and Anonymous (AN) — it is NOT
+ * per-user ACL'd, and Node's `net` server API exposes no way to tighten it.
+ * The actual access boundary is therefore the application-layer auth token: the
+ * daemon's `hello` handshake requires the token from ~/.papyrus/*.token (mode
+ * 0600, owner-only), and every data-bearing handler rejects unauthenticated
+ * clients (NOT_AUTHENTICATED) — so a reader that opens the pipe via the
+ * permissive DACL cannot obtain any session data without the token. Pipes have
+ * no filesystem file, so they cannot be chmod'ed or unlinked (the chmod/remove
+ * helpers below no-op for them) and they vanish when the server closes.
+ * existsSync DOES work against the \\.\pipe\ namespace, so liveness probes stay
+ * uniform.
  */
 export function getTerminalHostSocketPath(): string {
 	return getTerminalHostSocketPathFor(SUPERSET_DIR_NAME);

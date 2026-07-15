@@ -1,10 +1,20 @@
-import { projects, workspaces, worktrees } from "@superset/local-db";
-import { getAgentHome, getAgentWorktreePath } from "@papyrus/server-core/agent-home";
-import { beginAgentInit, retryAgentInit } from "@papyrus/server-core/agent-init";
+import { randomUUID } from "node:crypto";
+import { existsSync, readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import {
+	getAgentHome,
+	getAgentMemoryDir,
+	getAgentWorktreePath,
+} from "@papyrus/server-core/agent-home";
+import {
+	beginAgentInit,
+	retryAgentInit,
+} from "@papyrus/server-core/agent-init";
+import { MEMORY_SCAFFOLD_ENABLED } from "@papyrus/server-core/feature-flags";
 import { localDb } from "@papyrus/server-core/local-db";
 import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
-import { workspaceInitManager } from "@papyrus/server-core/workspace-init-manager";
 import type { WorkspaceInitProgress } from "@papyrus/server-core/types/workspace-init";
+import { workspaceInitManager } from "@papyrus/server-core/workspace-init-manager";
 import {
 	activateProject,
 	clearWorkspaceDeletingStatus,
@@ -18,12 +28,111 @@ import {
 	setLastActiveWorkspace,
 	updateActiveWorkspaceIfRemoved,
 } from "@papyrus/server-core/workspaces/db-helpers";
+import { projects, workspaces, worktrees } from "@superset/local-db";
 import { observable } from "@trpc/server/observable";
 import { eq, isNotNull } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
-import { existsSync, rmSync } from "node:fs";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
+
+/** One entry in an agent's memory/skill surface (mirrors the desktop shape). */
+interface AgentFileEntry {
+	label: string;
+	group: "Memory" | "Skills" | "Worktree";
+	absolutePath: string;
+	relativeToWorktree: string | null;
+}
+
+/** Recursively collect SKILL.md files under a skills dir (tolerates missing dir). */
+function findSkillFiles(skillsDir: string): string[] {
+	if (!existsSync(skillsDir)) return [];
+	const results: string[] = [];
+	const walk = (dir: string) => {
+		try {
+			for (const entry of readdirSync(dir, { withFileTypes: true })) {
+				const name = String(entry.name);
+				const abs = join(dir, name);
+				if (entry.isDirectory()) {
+					walk(abs);
+				} else if (name === "SKILL.md") {
+					results.push(abs);
+				}
+			}
+		} catch {
+			// ignore unreadable dir
+		}
+	};
+	walk(skillsDir);
+	return results;
+}
+
+/**
+ * List an agent's memory surface (canonical memory files, skill definitions,
+ * worktree bridge files). Headless port of the desktop collectAgentFiles —
+ * all three path helpers come from server-core/agent-home. Tolerates missing
+ * dirs (returns what exists on disk).
+ */
+function collectAgentFiles(agentId: string): AgentFileEntry[] {
+	const entries: AgentFileEntry[] = [];
+
+	const memoryDir = getAgentMemoryDir(agentId);
+	for (const name of [
+		"AGENT.md",
+		"USER.md",
+		"MEMORY.md",
+		".writeback-protocol.md",
+	]) {
+		const abs = join(memoryDir, name);
+		if (existsSync(abs)) {
+			entries.push({
+				label: name,
+				group: "Memory",
+				absolutePath: abs,
+				relativeToWorktree: null,
+			});
+		}
+	}
+
+	const memoriesDir = join(memoryDir, "memories");
+	if (existsSync(memoriesDir)) {
+		try {
+			for (const name of readdirSync(memoriesDir)) {
+				if (name.endsWith(".md")) {
+					entries.push({
+						label: `memories/${name}`,
+						group: "Memory",
+						absolutePath: join(memoriesDir, name),
+						relativeToWorktree: null,
+					});
+				}
+			}
+		} catch {
+			// ignore unreadable memories dir
+		}
+	}
+
+	const skillsDir = join(getAgentHome(agentId), "skills");
+	for (const abs of findSkillFiles(skillsDir)) {
+		const rel = abs.slice(skillsDir.length + 1);
+		entries.push({
+			label: `skills/${rel}`,
+			group: "Skills",
+			absolutePath: abs,
+			relativeToWorktree: null,
+		});
+	}
+
+	const claudeMd = join(getAgentWorktreePath(agentId), "CLAUDE.md");
+	if (existsSync(claudeMd)) {
+		entries.push({
+			label: "CLAUDE.md",
+			group: "Worktree",
+			absolutePath: claudeMd,
+			relativeToWorktree: "CLAUDE.md",
+		});
+	}
+
+	return entries;
+}
 
 /**
  * Agents (workspaces) — server mirror of the desktop router paths. Thin
@@ -91,9 +200,15 @@ export const workspacesRouter = router({
 			};
 		}),
 
-	getAll: authedProcedure.query(() =>
-		localDb.select().from(workspaces).all(),
-	),
+	getAll: authedProcedure.query(() => localDb.select().from(workspaces).all()),
+
+	/** Agent Files panel — an agent's memory/skill/worktree bridge files. */
+	listAgentFiles: authedProcedure
+		.input(z.object({ workspaceId: z.string() }))
+		.query(({ input }): AgentFileEntry[] => {
+			if (!MEMORY_SCAFFOLD_ENABLED) return [];
+			return collectAgentFiles(input.workspaceId);
+		}),
 
 	getAllGrouped: authedProcedure.query(() => {
 		const activeProjects = localDb
@@ -130,70 +245,69 @@ export const workspacesRouter = router({
 			}));
 	}),
 
-	createAgent: authedProcedure
-		.input(createAgentInput)
-		.mutation(({ input }) => {
-			const project = getProject(input.projectId);
-			if (!project) {
-				throw new Error(`Category ${input.projectId} not found`);
-			}
+	createAgent: authedProcedure.input(createAgentInput).mutation(({ input }) => {
+		const project = getProject(input.projectId);
+		if (!project) {
+			throw new Error(`Category ${input.projectId} not found`);
+		}
 
-			const agentId = randomUUID();
-			const worktreePath = getAgentWorktreePath(agentId);
-			const branch = "main"; // placeholder; init job resolves the real one
+		const agentId = randomUUID();
+		const worktreePath = getAgentWorktreePath(agentId);
+		const branch = "main"; // placeholder; init job resolves the real one
 
-			const worktree = localDb
-				.insert(worktrees)
-				.values({
-					projectId: input.projectId,
-					path: worktreePath,
-					branch,
-					baseBranch: branch,
-					gitStatus: null,
-				})
-				.returning()
-				.get();
+		const worktree = localDb
+			.insert(worktrees)
+			.values({
+				projectId: input.projectId,
+				path: worktreePath,
+				branch,
+				baseBranch: branch,
+				gitStatus: null,
+			})
+			.returning()
+			.get();
 
-			const workspace = localDb
-				.insert(workspaces)
-				.values({
-					id: agentId,
-					projectId: input.projectId,
-					worktreeId: worktree.id,
-					type: "worktree",
-					branch,
-					name: input.name,
-					runtime: input.runtime,
-					isUnnamed: false,
-					tabOrder: getMaxWorkspaceTabOrder(input.projectId) + 1,
-				})
-				.returning()
-				.get();
-
-			activateProject(project);
-			setLastActiveWorkspace(agentId);
-
-			beginAgentInit(agentId, {
-				categoryId: input.projectId,
+		const workspace = localDb
+			.insert(workspaces)
+			.values({
+				id: agentId,
+				projectId: input.projectId,
 				worktreeId: worktree.id,
-				agentName: input.name,
-				role: input.role,
+				type: "worktree",
+				branch,
+				name: input.name,
 				runtime: input.runtime,
-				source: input.repo,
-			});
+				isUnnamed: false,
+				tabOrder: getMaxWorkspaceTabOrder(input.projectId) + 1,
+			})
+			.returning()
+			.get();
 
-			return {
-				workspace,
-				worktreePath,
-				worktreeId: worktree.id,
-				isInitializing: true,
-			};
-		}),
+		activateProject(project);
+		setLastActiveWorkspace(agentId);
+
+		beginAgentInit(agentId, {
+			categoryId: input.projectId,
+			worktreeId: worktree.id,
+			agentName: input.name,
+			role: input.role,
+			runtime: input.runtime,
+			source: input.repo,
+		});
+
+		return {
+			workspace,
+			worktreePath,
+			worktreeId: worktree.id,
+			isInitializing: true,
+		};
+	}),
 
 	getInitProgress: authedProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.query(
-			({ input }) => workspaceInitManager.getProgress(input.workspaceId) ?? null,
+			({ input }) =>
+				workspaceInitManager.getProgress(input.workspaceId) ?? null,
 		),
 
 	onInitProgress: authedProcedure
@@ -237,9 +351,7 @@ export const workspacesRouter = router({
 		}),
 
 	canDelete: authedProcedure
-		.input(
-			z.object({ id: z.string(), skipGitChecks: z.boolean().optional() }),
-		)
+		.input(z.object({ id: z.string(), skipGitChecks: z.boolean().optional() }))
 		.query(async ({ input }) => {
 			const workspace = getWorkspace(input.id);
 			const base = {
@@ -248,10 +360,20 @@ export const workspacesRouter = router({
 				hasUnpushedCommits: false,
 			};
 			if (!workspace) {
-				return { ...base, canDelete: false, reason: "Workspace not found", workspace: null };
+				return {
+					...base,
+					canDelete: false,
+					reason: "Workspace not found",
+					workspace: null,
+				};
 			}
 			if (workspace.deletingAt) {
-				return { ...base, canDelete: false, reason: "Deletion already in progress", workspace: null };
+				return {
+					...base,
+					canDelete: false,
+					reason: "Deletion already in progress",
+					workspace: null,
+				};
 			}
 			const activeTerminalCount =
 				await getDaemonTerminalManager().getSessionCountByWorkspaceId(input.id);

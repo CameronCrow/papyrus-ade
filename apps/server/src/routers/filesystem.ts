@@ -1,7 +1,19 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
+
+/** Max size for a by-path text read (2 MiB), matching the desktop viewer cap. */
+const MAX_BY_PATH_SIZE = 2 * 1024 * 1024;
+
+/** Detect binary content by scanning the leading bytes for a NUL. */
+function isBinaryBuffer(buffer: Buffer): boolean {
+	const checkLength = Math.min(buffer.length, 8192);
+	for (let i = 0; i < checkLength; i++) {
+		if (buffer[i] === 0) return true;
+	}
+	return false;
+}
 
 interface DirectoryEntry {
 	id: string;
@@ -62,6 +74,75 @@ export const filesystemRouter = router({
 					content: "",
 					error: error instanceof Error ? error.message : String(error),
 				};
+			}
+		}),
+
+	/**
+	 * Read a text file by ABSOLUTE path — used by the file-viewer panes for
+	 * files that live outside the worktree (e.g. an agent's memory/skill files
+	 * under the agent-home dir). Mirrors the desktop filesystem.readFileByPath
+	 * shape so the viewer content loader consumes either interchangeably.
+	 */
+	readFileByPath: authedProcedure
+		.input(z.object({ absolutePath: z.string() }))
+		.query(
+			async ({
+				input,
+			}): Promise<
+				| { ok: true; content: string; truncated: boolean; byteLength: number }
+				| { ok: false; reason: "not-found" | "too-large" | "binary" }
+			> => {
+				try {
+					const stats = await stat(input.absolutePath);
+					if (!stats.isFile()) return { ok: false, reason: "not-found" };
+					if (stats.size > MAX_BY_PATH_SIZE) {
+						return { ok: false, reason: "too-large" };
+					}
+					const buffer = await readFile(input.absolutePath);
+					if (isBinaryBuffer(buffer)) return { ok: false, reason: "binary" };
+					return {
+						ok: true,
+						content: buffer.toString("utf-8"),
+						truncated: false,
+						byteLength: buffer.length,
+					};
+				} catch {
+					return { ok: false, reason: "not-found" };
+				}
+			},
+		),
+
+	stat: authedProcedure
+		.input(z.object({ path: z.string() }))
+		.query(async ({ input }) => {
+			try {
+				const stats = await stat(input.path);
+				return {
+					size: stats.size,
+					isDirectory: stats.isDirectory(),
+					isFile: stats.isFile(),
+					isSymbolicLink: stats.isSymbolicLink(),
+					createdAt: stats.birthtime.toISOString(),
+					modifiedAt: stats.mtime.toISOString(),
+					accessedAt: stats.atime.toISOString(),
+				};
+			} catch {
+				return null;
+			}
+		}),
+
+	exists: authedProcedure
+		.input(z.object({ path: z.string() }))
+		.query(async ({ input }) => {
+			try {
+				const stats = await stat(input.path);
+				return {
+					exists: true,
+					isDirectory: stats.isDirectory(),
+					isFile: stats.isFile(),
+				};
+			} catch {
+				return { exists: false, isDirectory: false, isFile: false };
 			}
 		}),
 });

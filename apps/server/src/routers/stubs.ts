@@ -1,3 +1,4 @@
+import { DEFAULT_SHOW_RESOURCE_MONITOR } from "@papyrus/server-core/constants";
 import { localDb } from "@papyrus/server-core/local-db";
 import {
 	clearProviderKey,
@@ -8,6 +9,7 @@ import {
 import { settings } from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
@@ -38,6 +40,31 @@ export const settingsRouter = router({
 				.onConflictDoUpdate({
 					target: settings.id,
 					set: { notificationSoundsMuted: input.muted },
+				})
+				.run();
+			return { success: true };
+		}),
+
+	// Resource-monitor visibility — backs the TopBar ResourceConsumption panel.
+	// Same semantics/table as desktop (default off; persisted in the settings row).
+	getShowResourceMonitor: authedProcedure.query(() => {
+		const row = localDb
+			.select({ showResourceMonitor: settings.showResourceMonitor })
+			.from(settings)
+			.where(eq(settings.id, 1))
+			.get();
+		return row?.showResourceMonitor ?? DEFAULT_SHOW_RESOURCE_MONITOR;
+	}),
+
+	setShowResourceMonitor: authedProcedure
+		.input(z.object({ enabled: z.boolean() }))
+		.mutation(({ input }) => {
+			localDb
+				.insert(settings)
+				.values({ id: 1, showResourceMonitor: input.enabled })
+				.onConflictDoUpdate({
+					target: settings.id,
+					set: { showResourceMonitor: input.enabled },
 				})
 				.run();
 			return { success: true };
