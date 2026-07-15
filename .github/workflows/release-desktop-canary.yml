@@ -1,9 +1,12 @@
 name: Release Desktop Canary
 
+# Disabled per issue #3 until Phase 5 revisits desktop distribution.
+# Papyrus's direction is server + web UI; the Electron desktop shell is an
+# optional Phase 5 thin shell (triggered, not scheduled). The scheduled canary
+# builds were failing on macOS arm64 on every run, so the schedule trigger has
+# been removed. This workflow remains manually dispatchable (workflow_dispatch)
+# if a desktop canary build is ever needed before then.
 on:
-  schedule:
-    # Every 12 hours at 12 AM and 12 PM UTC
-    - cron: "0 0,12 * * *"
   workflow_dispatch:
     inputs:
       force_build:
