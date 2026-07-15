@@ -1,6 +1,7 @@
 import { router } from "../trpc";
 import { changesRouter } from "./changes";
 import { configRouter } from "./config";
+import { externalRouter } from "./external";
 import { filesystemRouter } from "./filesystem";
 import { healthRouter } from "./health";
 import { notificationsRouter } from "./notifications";
@@ -30,6 +31,7 @@ export const appRouter = router({
 	changes: changesRouter,
 	resourceMetrics: resourceMetricsRouter,
 	config: configRouter,
+	external: externalRouter,
 });
 
 export type AppRouter = typeof appRouter;
