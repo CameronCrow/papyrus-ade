@@ -3,17 +3,17 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
 import { regenerateCodexAgentsMd } from "main/lib/agent-scaffold";
+import { appState } from "main/lib/app-state";
 import { requestAppleEventsAccessOnce } from "main/lib/apple-events-permission";
 import { MEMORY_SCAFFOLD_ENABLED } from "main/lib/feature-flags";
-import { appState } from "main/lib/app-state";
 import { localDb } from "main/lib/local-db";
 import { restartDaemon as restartDaemonShared } from "main/lib/terminal";
 import {
 	TERMINAL_SESSION_KILLED_MESSAGE,
 	TerminalKilledError,
 } from "main/lib/terminal/errors";
-import { getTerminalHostClient } from "main/lib/terminal-host/client";
 import { writeClaudeSessionIdToHistory } from "main/lib/terminal-history";
+import { getTerminalHostClient } from "main/lib/terminal-host/client";
 import { getWorkspaceRuntimeRegistry } from "main/lib/workspace-runtime";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
@@ -72,6 +72,10 @@ export const createTerminalRouter = () => {
 					skipColdRestore: z.boolean().optional(),
 					allowKilled: z.boolean().optional(),
 					themeType: z.enum(["dark", "light"]).optional(),
+					// Multi-device attach policy (issue #7): identifies the calling
+					// UI surface. Accepted for contract parity with papyrus-server;
+					// the single-client desktop ignores it.
+					clientId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -188,6 +192,10 @@ export const createTerminalRouter = () => {
 						claudeSessionId: result.claudeSessionId,
 						// Include snapshot for daemon mode (renderer can use for rehydration)
 						snapshot: result.snapshot,
+						// Multi-device attach policy: the desktop is single-client, so
+						// an attach is always the writer. papyrus-server returns true
+						// here for concurrent web attaches (mirror-readonly v1).
+						readOnly: false,
 					};
 				} catch (error) {
 					const isKilledError =
@@ -228,6 +236,8 @@ export const createTerminalRouter = () => {
 					paneId: z.string(),
 					data: z.string(),
 					throwOnError: z.boolean().optional(),
+					// Contract parity with papyrus-server (issue #7); ignored here.
+					clientId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -293,6 +303,8 @@ export const createTerminalRouter = () => {
 					cols: z.number(),
 					rows: z.number(),
 					seq: z.number().optional(),
+					// Contract parity with papyrus-server (issue #7); ignored here.
+					clientId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -304,11 +316,23 @@ export const createTerminalRouter = () => {
 				z.object({
 					paneId: z.string(),
 					signal: z.string().optional(),
+					// Contract parity with papyrus-server (issue #7); ignored here.
+					clientId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
 				terminal.signal(input);
 			}),
+
+		/**
+		 * Multi-device attach policy (issue #7): explicit writer takeover.
+		 * Meaningful only on papyrus-server where concurrent web clients
+		 * contend for the writer lease; the single-client desktop is always
+		 * the writer, so this is a contract-parity no-op.
+		 */
+		takeWriter: publicProcedure
+			.input(z.object({ paneId: z.string(), clientId: z.string() }))
+			.mutation(() => ({ readOnly: false as boolean })),
 
 		kill: publicProcedure
 			.input(
@@ -324,6 +348,8 @@ export const createTerminalRouter = () => {
 			.input(
 				z.object({
 					paneId: z.string(),
+					// Contract parity with papyrus-server (issue #7); ignored here.
+					clientId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -481,8 +507,18 @@ export const createTerminalRouter = () => {
 			}),
 
 		stream: publicProcedure
-			.input(z.string())
-			.subscription(({ input: paneId }) => {
+			// The object form carries the multi-device attach-policy clientId
+			// (issue #7). The desktop is single-client: it accepts both forms
+			// for contract parity but never emits `mode` events — the renderer
+			// therefore never shows a read-only state under Electron.
+			.input(
+				z.union([
+					z.string(),
+					z.object({ paneId: z.string(), clientId: z.string().optional() }),
+				]),
+			)
+			.subscription(({ input }) => {
+				const paneId = typeof input === "string" ? input : input.paneId;
 				return observable<
 					| { type: "data"; data: string }
 					| {
@@ -493,6 +529,7 @@ export const createTerminalRouter = () => {
 					  }
 					| { type: "disconnect"; reason: string }
 					| { type: "error"; error: string; code?: string }
+					| { type: "mode"; readOnly: boolean }
 				>((emit) => {
 					if (DEBUG_TERMINAL) {
 						console.log(`[Terminal Stream] Subscribe: ${paneId}`);
