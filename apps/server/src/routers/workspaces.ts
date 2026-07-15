@@ -1,18 +1,27 @@
 import { projects, workspaces, worktrees } from "@superset/local-db";
-import { getAgentWorktreePath } from "@papyrus/server-core/agent-home";
-import { beginAgentInit } from "@papyrus/server-core/agent-init";
+import { getAgentHome, getAgentWorktreePath } from "@papyrus/server-core/agent-home";
+import { beginAgentInit, retryAgentInit } from "@papyrus/server-core/agent-init";
 import { localDb } from "@papyrus/server-core/local-db";
+import { getDaemonTerminalManager } from "@papyrus/server-core/terminal";
 import { workspaceInitManager } from "@papyrus/server-core/workspace-init-manager";
 import type { WorkspaceInitProgress } from "@papyrus/server-core/types/workspace-init";
 import {
 	activateProject,
+	clearWorkspaceDeletingStatus,
+	deleteWorkspace,
+	deleteWorktreeRecord,
 	getMaxWorkspaceTabOrder,
 	getProject,
+	getWorkspace,
+	hideProjectIfNoWorkspaces,
+	markWorkspaceAsDeleting,
 	setLastActiveWorkspace,
+	updateActiveWorkspaceIfRemoved,
 } from "@papyrus/server-core/workspaces/db-helpers";
 import { observable } from "@trpc/server/observable";
 import { eq, isNotNull } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import { existsSync, rmSync } from "node:fs";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
@@ -209,4 +218,141 @@ export const workspacesRouter = router({
 				return () => workspaceInitManager.off("progress", handler);
 			}),
 		),
+
+	retryInit: authedProcedure
+		.input(
+			z.object({
+				workspaceId: z.string(),
+				deduplicateBranchName: z.boolean().optional(),
+			}),
+		)
+		.mutation(({ input }) => {
+			// ponytail: papyrus agents own standalone repos — retryAgentInit re-runs
+			// the whole init job; the desktop's legacy shared-worktree retry path
+			// doesn't apply server-side.
+			if (!retryAgentInit(input.workspaceId)) {
+				throw new Error("No retryable init job for this agent");
+			}
+			return { success: true };
+		}),
+
+	canDelete: authedProcedure
+		.input(
+			z.object({ id: z.string(), skipGitChecks: z.boolean().optional() }),
+		)
+		.query(async ({ input }) => {
+			const workspace = getWorkspace(input.id);
+			const base = {
+				activeTerminalCount: 0,
+				hasChanges: false,
+				hasUnpushedCommits: false,
+			};
+			if (!workspace) {
+				return { ...base, canDelete: false, reason: "Workspace not found", workspace: null };
+			}
+			if (workspace.deletingAt) {
+				return { ...base, canDelete: false, reason: "Deletion already in progress", workspace: null };
+			}
+			const activeTerminalCount =
+				await getDaemonTerminalManager().getSessionCountByWorkspaceId(input.id);
+			// ponytail: agents own standalone repos, so uncommitted/unpushed checks
+			// are skipped v1 — add git status checks if silent data loss ever bites.
+			return {
+				...base,
+				canDelete: true,
+				reason: null,
+				workspace,
+				warning: null,
+				activeTerminalCount,
+			};
+		}),
+
+	delete: authedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				deleteLocalBranch: z.boolean().optional(),
+				force: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const workspace = getWorkspace(input.id);
+			if (!workspace) {
+				return { success: false, error: "Workspace not found" };
+			}
+
+			markWorkspaceAsDeleting(input.id);
+			updateActiveWorkspaceIfRemoved(input.id);
+
+			if (workspaceInitManager.isInitializing(input.id)) {
+				workspaceInitManager.cancel(input.id);
+				try {
+					await workspaceInitManager.waitForInit(input.id, 30000);
+				} catch {
+					clearWorkspaceDeletingStatus(input.id);
+					return {
+						success: false,
+						error: "Failed to cancel agent initialization. Please try again.",
+					};
+				}
+			}
+
+			const terminalResult = await getDaemonTerminalManager().killByWorkspaceId(
+				input.id,
+			);
+
+			// Papyrus agents live entirely under ~/.papyrus/agents/<id> — removing
+			// that directory removes the repo, memory, and CLI home in one shot.
+			const agentHome = getAgentHome(input.id);
+			try {
+				if (existsSync(agentHome)) {
+					rmSync(agentHome, { recursive: true, force: true });
+				}
+			} catch (error) {
+				if (!input.force) {
+					clearWorkspaceDeletingStatus(input.id);
+					return {
+						success: false,
+						error: `Failed to remove agent directory: ${error instanceof Error ? error.message : String(error)}`,
+					};
+				}
+			}
+
+			deleteWorkspace(input.id);
+			if (workspace.worktreeId) {
+				deleteWorktreeRecord(workspace.worktreeId);
+			}
+			hideProjectIfNoWorkspaces(workspace.projectId);
+			workspaceInitManager.clearJob(input.id);
+
+			return {
+				success: true,
+				terminalWarning:
+					terminalResult.failed > 0
+						? `${terminalResult.failed} terminal process(es) may still be running`
+						: undefined,
+			};
+		}),
+
+	close: authedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ input }) => {
+			const workspace = getWorkspace(input.id);
+			if (!workspace) {
+				throw new Error("Workspace not found");
+			}
+			const terminalResult = await getDaemonTerminalManager().killByWorkspaceId(
+				input.id,
+			);
+			deleteWorkspace(input.id);
+			hideProjectIfNoWorkspaces(workspace.projectId);
+			updateActiveWorkspaceIfRemoved(input.id);
+			return {
+				success: true,
+				terminalWarning:
+					terminalResult.failed > 0
+						? `${terminalResult.failed} terminal process(es) may still be running`
+						: undefined,
+			};
+		}),
 });
