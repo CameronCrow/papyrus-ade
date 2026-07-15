@@ -3,6 +3,7 @@ import { changesRouter } from "./changes";
 import { configRouter } from "./config";
 import { filesystemRouter } from "./filesystem";
 import { healthRouter } from "./health";
+import { notificationsRouter } from "./notifications";
 import { projectsRouter } from "./projects";
 import { resourceMetricsRouter } from "./resource-metrics";
 import { settingsRouter, syncRouter } from "./stubs";
@@ -23,6 +24,7 @@ export const appRouter = router({
 	workspaces: workspacesRouter,
 	filesystem: filesystemRouter,
 	health: healthRouter,
+	notifications: notificationsRouter,
 	terminal: terminalRouter,
 	uiState: uiStateRouter,
 	changes: changesRouter,
