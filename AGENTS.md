@@ -12,9 +12,9 @@ Bun + Turbo monorepo with:
 - **Apps (active)**:
   - `apps/desktop` - Electron desktop application (the current product)
   - `apps/docs` - Documentation site
-- **Apps (quarantined — upstream Superset cloud product, NOT in the workspace
-  graph, do not build on):** `apps/web`, `apps/api`, `apps/mobile`,
-  `apps/admin`, `apps/marketing`, `apps/streams`
+- **Apps (deleted)**: the upstream Superset cloud product (`apps/web`,
+  `apps/api`, `apps/mobile`, `apps/admin`, `apps/marketing`, `apps/streams`)
+  was quarantined in Phase 0 and deleted post-M1 — do not resurrect it
 - **Packages**:
   - `packages/ui` - Shared UI components (shadcn/ui + TailwindCSS v4).
     - Add components: `npx shadcn@latest add <component>` (run in `packages/ui/`)
@@ -37,7 +37,8 @@ Bun + Turbo monorepo with:
 - **Package Manager**: Bun (no npm/yarn/pnpm)
 - **Build System**: Turborepo
 - **Database**: SQLite via `packages/local-db` (Drizzle). The Neon PostgreSQL
-  setup in `packages/db` belongs to the quarantined cloud apps.
+  setup in `packages/db` belonged to the deleted cloud apps; the package is
+  kept only because the desktop renderer still imports its types.
 - **UI**: React + TailwindCSS v4 + shadcn/ui
 - **Code Quality**: Biome (formatting + linting at root)
 
@@ -72,7 +73,7 @@ bun run clean:workspaces   # Clean all workspace node_modules
 ## Agent Rules
 1. **Type safety** - avoid `any` unless necessary
 2. **Prefer `gh` CLI** - when performing git operations (PRs, issues, checkout, etc.), prefer the GitHub CLI (`gh`) over raw `git` commands where possible
-3. **Shared command source** - keep command definitions in `.agents/commands/` only. `.claude/commands` and `.cursor/commands` should be symlinks to `../.agents/commands`. (`packages/chat` discovers slash commands from `.claude/commands`.)
+3. **Shared command source** - keep command definitions in `.agents/commands/` only. `.claude/commands` and `.cursor/commands` should be symlinks to `../.agents/commands`.
 4. **Workspace MCP config** - keep shared MCP servers in `.mcp.json`; `.cursor/mcp.json` should link to `../.mcp.json`. Codex uses `.codex/config.toml` (run with `CODEX_HOME=.codex codex ...`). OpenCode uses `opencode.json` and should mirror the same MCP set using OpenCode's `remote`/`local` schema.
 5. **Mastracode fork workflow** - for Superset's internal `mastracode` fork bundle and release process, follow `docs/mastracode-fork-workflow.md`.
 
