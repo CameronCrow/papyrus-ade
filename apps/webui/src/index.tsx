@@ -2,6 +2,7 @@
 // evaluates (stores read window.App at import time).
 import "./shell-web";
 import "./register-sw";
+import "./viewport-fix";
 import { ensureAuthenticated } from "./login-gate";
 
 // Gate on a validated token, THEN dynamically import the renderer (so the
