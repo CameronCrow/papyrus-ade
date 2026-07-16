@@ -1,3 +1,4 @@
+import { toast } from "@superset/ui/sonner";
 import { useParams } from "@tanstack/react-router";
 import {
 	useCallback,
@@ -195,6 +196,7 @@ export function GroupStrip() {
 			});
 		} catch (error) {
 			console.error("[GroupStrip] Failed to create note:", error);
+			toast.error("Failed to create note");
 		}
 	}, [activeWorkspaceId, workspace?.project?.mainRepoPath, createNoteMutation, addFileViewerPane]);
 
