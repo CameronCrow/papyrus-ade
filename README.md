@@ -123,6 +123,17 @@ A write-back protocol travels with the memory (when to save, when to skip, conso
 
 The blessed path is [Tailscale](https://tailscale.com): `tailscale serve` in front of the server port gives TLS and tailnet-only access while the server stays bound to localhost. A LAN + Caddy alternative is documented in the plan. Never expose the server to the raw internet.
 
+### Current deployment (cameronspc)
+
+The live server runs on `cameronspc` and is reachable tailnet-wide at:
+
+**https://cameronspc.tailfcc279.ts.net:8445**
+
+- Set up with `tailscale serve --bg --https=8445 http://127.0.0.1:7777` (`:443` was already taken by another service; `--bg` persists across reboots). Disable with `tailscale serve --https=8445 off`.
+- Auth token lives at `~\.papyrus\token` on cameronspc.
+- The server itself is a detached process — after a reboot, restart it from the repo: `cd apps\server; node dist\server.cjs serve --port 7777`.
+- On iPhone: connect Tailscale, open the URL in Safari, paste the token, then Share → Add to Home Screen for the PWA.
+
 ## License
 
 Papyrus is a modified derivative of ADE, which is itself a modified derivative of [Superset](https://github.com/superset-sh/superset) (Copyright Superset, Inc.). It is distributed under the **Elastic License 2.0** — see [LICENSE.md](LICENSE.md), with the modification chain documented in [NOTICE](NOTICE). Third-party dependency notices are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The agent memory architecture is adapted from [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) (MIT).
