@@ -1,4 +1,11 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import {
+	access,
+	mkdir,
+	readdir,
+	readFile,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 import { join, relative } from "node:path";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
@@ -75,6 +82,49 @@ export const filesystemRouter = router({
 					error: error instanceof Error ? error.message : String(error),
 				};
 			}
+		}),
+
+	/** Mirrors the desktop filesystem.createNote mutation used by the "+" tab-strip button. */
+	createNote: authedProcedure
+		.input(
+			z.object({
+				rootPath: z.string(),
+				name: z.string().optional(),
+				content: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const notesDir = join(input.rootPath, ".papyrus", "notes");
+			await mkdir(notesDir, { recursive: true });
+
+			const now = new Date();
+			const dateStr = now.toISOString().slice(0, 10);
+			const timeStr = now.toTimeString().slice(0, 5).replace(":", "");
+			const baseName = input.name
+				? input.name.replace(/[^a-zA-Z0-9_-]/g, "-")
+				: `${dateStr}-${timeStr}`;
+			const fileName = `${baseName}.md`;
+			const filePath = join(notesDir, fileName);
+
+			// If file exists, append a counter.
+			let finalPath = filePath;
+			let counter = 1;
+			while (true) {
+				try {
+					await access(finalPath);
+					finalPath = join(notesDir, `${baseName}-${counter}.md`);
+					counter++;
+				} catch {
+					break;
+				}
+			}
+
+			const header = input.name ? `# ${input.name}` : `# Note — ${dateStr}`;
+			const body = input.content ?? "";
+			await writeFile(finalPath, `${header}\n\n${body}\n`, "utf-8");
+
+			// Return path relative to rootPath for file-viewer.
+			return { relativePath: relative(input.rootPath, finalPath) };
 		}),
 
 	/**
