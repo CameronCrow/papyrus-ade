@@ -11,6 +11,7 @@ import { resourceMetricsRouter } from "./resource-metrics";
 import { settingsRouter, syncRouter } from "./stubs";
 import { terminalRouter } from "./terminal";
 import { uiStateRouter } from "./ui-state";
+import { usageRouter } from "./usage";
 import { workspacesRouter } from "./workspaces";
 
 /**
@@ -31,6 +32,7 @@ export const appRouter = router({
 	uiState: uiStateRouter,
 	changes: changesRouter,
 	resourceMetrics: resourceMetricsRouter,
+	usage: usageRouter,
 	config: configRouter,
 	external: externalRouter,
 	claudeSessions: claudeSessionsRouter,

@@ -22,6 +22,7 @@ import { createSettingsRouter } from "./settings";
 import { createSyncRouter } from "./sync";
 import { createTerminalRouter } from "./terminal";
 import { createUiStateRouter } from "./ui-state";
+import { createUsageRouter } from "./usage";
 import { createWindowRouter } from "./window";
 import { createWorkspacesRouter } from "./workspaces";
 
@@ -43,6 +44,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		permissions: createPermissionsRouter(),
 		ports: createPortsRouter(),
 		resourceMetrics: createResourceMetricsRouter(),
+		usage: createUsageRouter(),
 		menu: createMenuRouter(),
 		hotkeys: createHotkeysRouter(getWindow),
 		external: createExternalRouter(),
