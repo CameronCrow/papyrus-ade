@@ -204,6 +204,15 @@ const createAgentInput = z.object({
 			z.object({ type: z.literal("clone"), url: z.string().min(1) }),
 		])
 		.default({ type: "init" }),
+	// Create-from-existing (issue #41): copy the source agent's persona
+	// (AGENT.md re-stamped, USER.md, skills/**) over the fresh scaffold.
+	// `includeLessons` additionally carries MEMORY.md's "## Lessons" section.
+	duplicateFrom: z
+		.object({
+			agentId: z.string().min(1),
+			includeLessons: z.boolean().default(false),
+		})
+		.optional(),
 });
 
 export const workspacesRouter = router({
@@ -331,6 +340,29 @@ export const workspacesRouter = router({
 			throw new Error(`Category ${input.projectId} not found`);
 		}
 
+		// Create-from-existing: resolve the source agent up front so a bad id
+		// fails the call instead of the background init job.
+		let duplicateFrom:
+			| {
+					sourceAgentId: string;
+					sourceAgentName: string;
+					includeLessons: boolean;
+			  }
+			| undefined;
+		if (input.duplicateFrom) {
+			const source = getWorkspace(input.duplicateFrom.agentId);
+			if (!source) {
+				throw new Error(
+					`Source agent ${input.duplicateFrom.agentId} not found`,
+				);
+			}
+			duplicateFrom = {
+				sourceAgentId: source.id,
+				sourceAgentName: source.name,
+				includeLessons: input.duplicateFrom.includeLessons,
+			};
+		}
+
 		const agentId = randomUUID();
 		const worktreePath = getAgentWorktreePath(agentId);
 		const branch = "main"; // placeholder; init job resolves the real one
@@ -373,6 +405,7 @@ export const workspacesRouter = router({
 			role: input.role,
 			runtime: input.runtime,
 			source: input.repo,
+			duplicateFrom,
 		});
 
 		return {

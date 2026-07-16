@@ -190,7 +190,9 @@ the body loads on demand. Create a skill for any reusable, multi-step procedure
 or a class-of-task lesson — NOT for one-off facts (those go in MEMORY.md). When
 the user corrects your style, format, or workflow for a kind of task, embed that
 correction in the skill that governs that task, so the next session starts
-already knowing.
+already knowing. A lesson that would hold on any codebase belongs in a skill
+(or propose it for AGENT.md's standing preferences) — MEMORY.md is for *this*
+project.
 
 ## Session-end reflection
 
