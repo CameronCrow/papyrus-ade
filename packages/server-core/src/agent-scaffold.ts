@@ -267,6 +267,75 @@ dependency stance.
 A single command or check that proves the skill worked.
 `;
 
+// Built-in skill (Papyrus issue #42): lets an existing agent update its own
+// persona from another agent's, on explicit human request. Companion to #41
+// (persona duplication at agent *creation*) — this covers an already-live
+// agent adopting improvements from a sibling. Follows the same SKILL_TEMPLATE
+// doctrine (agentskills.io frontmatter, description <= 60 chars, canonical
+// section order) as every other shipped skill.
+const ADOPT_PERSONA_SKILL = `---
+name: adopt-persona
+description: Adopt another agent's Role, skills, and USER facts.
+version: 0.1.0
+platforms: [macos, linux]
+metadata:
+  ade:
+    tags: [Persona, Memory]
+---
+
+# Adopt Persona
+
+Update {{agent_name}}'s own persona and skills from another Papyrus agent's,
+by name. Plain file tools only — no DB/tRPC access is available to agents.
+Only ever runs when {{user_name}} explicitly invokes it; never automatically,
+and never as part of session-end reflection.
+
+## When to Use
+- {{user_name}} says "adopt <agent>'s persona", "update your persona from
+  <agent>", or "sync your skills from <agent>".
+
+## Prerequisites
+- None.
+
+## Procedure
+1. Resolve the source agent: scan \`{{agent_home}}/../*/memory/AGENT.md\`
+   (every sibling agent's canonical memory) and read each file's first
+   \`# <name>\` heading until one matches the name given. If none match, or
+   more than one does, stop and ask {{user_name}} to disambiguate.
+2. Read the source's \`AGENT.md\`. Merge its \`## Role\` and \`## Standing
+   preferences\` content into your own \`{{agent_home}}/memory/AGENT.md\` —
+   but keep your own \`# {{agent_name}}\` title and every agent-home /
+   worktree path in the Operating brief untouched. Never copy the file
+   wholesale; it embeds the source's identity and machine paths.
+3. Copy skills: for each folder under the source's \`skills/\`, copy it into
+   \`{{agent_home}}/skills/\` only if you don't already have a skill with that
+   name. On a name collision, keep your own version.
+4. Merge \`USER.md\`: add any fact from the source's \`USER.md\` that yours is
+   missing (both describe the same human). Keep your own wording where the
+   two already agree or conflict.
+5. Do NOT adopt \`MEMORY.md\` or \`memory/*.md\` — the source's Project notes
+   and Lessons describe a different repo/session. If {{user_name}}
+   explicitly asks for the source's lessons too, offer to append its
+   \`## Lessons\` bullets under your own, clearly attributed to the source
+   agent.
+6. Report a summary of exactly what changed: which Role/Standing-preferences
+   lines were merged, which skills were copied, which USER.md facts were
+   added. If nothing needed to change, say so.
+
+## Pitfalls
+- Don't overwrite your own name or \`{{agent_home}}\` paths — that's the one
+  thing this skill must never adopt.
+- Don't run unprompted; this is a human-gated, on-demand skill, not routine
+  memory maintenance.
+- Don't adopt MEMORY.md or \`memories/\` by default — only \`## Lessons\`, and
+  only if asked.
+
+## Verification
+\`{{agent_home}}/memory/AGENT.md\` still opens with \`# {{agent_name}}\` and
+still points at \`{{agent_home}}\` in its Operating brief, and the reported
+change summary matches what actually changed in AGENT.md/skills/USER.md.
+`;
+
 const CLAUDE_BRIDGE = `@{{agent_home}}/memory/AGENT.md
 @{{agent_home}}/memory/USER.md
 <!-- MEMORY.md is loaded via Claude Code native auto-memory (autoMemoryDirectory). -->
@@ -393,6 +462,9 @@ export function scaffoldAgentMemory({
 	);
 	writeIfEmpty(join(skillsDir, "README.md"), sub(SKILLS_README, vars));
 	writeIfEmpty(join(skillsDir, "SKILL.template.md"), sub(SKILL_TEMPLATE, vars));
+	const adoptPersonaDir = join(skillsDir, "adopt-persona");
+	mkdirSync(adoptPersonaDir, { recursive: true });
+	writeIfEmpty(join(adoptPersonaDir, "SKILL.md"), sub(ADOPT_PERSONA_SKILL, vars));
 
 	// Per-runtime bridge files in the worktree (point each CLI at canonical
 	// memory). Idempotent so we never clobber a bridge the user customized.
@@ -469,4 +541,38 @@ export function scaffoldAgentMemory({
 	if (runtime === "codex") {
 		regenerateCodexAgentsMd(agentId);
 	}
+}
+
+/**
+ * Ensure the skills/ dir carries the current set of built-in skills, without
+ * touching canonical memory or bridges. scaffoldAgentMemory already does this
+ * as part of a full scaffold, but the launch-time backfill (agent-memory-backfill.ts)
+ * skips agents whose memory/ dir is already non-empty — by design, so it never
+ * re-processes a hand-authored or previously-scaffolded agent — which means
+ * scaffoldAgentMemory is never called again for them. That leaves no path for
+ * a newly-added built-in skill (e.g. adopt-persona, #42) to reach an agent
+ * that was fully scaffolded before the skill existed. Call this instead for
+ * that case: same writeIfEmpty idempotence, but scoped to skills/ only, so it
+ * never disturbs a memory file the agent or user has since edited.
+ */
+export function scaffoldAgentSkills(
+	agentId: string,
+	agentName: string,
+	userName?: string,
+): void {
+	const agentHome = getAgentHome(agentId);
+	const skillsDir = join(agentHome, "skills");
+	const vars: Record<string, string> = {
+		agent_name: agentName,
+		agent_id: agentId,
+		agent_home: agentHome,
+		user_name: userName?.trim() || "the user",
+	};
+
+	mkdirSync(skillsDir, { recursive: true });
+	writeIfEmpty(join(skillsDir, "README.md"), sub(SKILLS_README, vars));
+	writeIfEmpty(join(skillsDir, "SKILL.template.md"), sub(SKILL_TEMPLATE, vars));
+	const adoptPersonaDir = join(skillsDir, "adopt-persona");
+	mkdirSync(adoptPersonaDir, { recursive: true });
+	writeIfEmpty(join(adoptPersonaDir, "SKILL.md"), sub(ADOPT_PERSONA_SKILL, vars));
 }
