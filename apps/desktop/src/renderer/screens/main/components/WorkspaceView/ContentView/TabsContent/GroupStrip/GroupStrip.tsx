@@ -156,6 +156,7 @@ export function GroupStrip() {
 		if (!activeWorkspaceId) return;
 		const result = spawnAgentSession({
 			id: activeWorkspaceId,
+			name: workspace?.name ?? null,
 			runtime: workspace?.runtime ?? null,
 			worktreePath: workspace?.worktreePath ?? null,
 		});

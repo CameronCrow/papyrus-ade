@@ -6,6 +6,7 @@ import { resolveAgentWorktreePath } from "@papyrus/server-core/agent-worktree";
 import {
 	importClaudeSession,
 	listSessionsForRepo,
+	readLatestSessionStats,
 	scanClaudeSessions,
 } from "@papyrus/server-core/claude-sessions";
 import { localDb } from "@papyrus/server-core/local-db";
@@ -40,6 +41,18 @@ export const claudeSessionsRouter = router({
 			}
 			return scanClaudeSessions();
 		}),
+
+	/**
+	 * Live stats for the newest Claude Code session in a worktree (issue #36):
+	 * active model + context-size estimate from the latest assistant turn.
+	 * Polled by the session tab strip; null when the worktree has no Claude
+	 * sessions (non-Claude runtimes degrade to name-only tabs). Mirrors the
+	 * desktop `claudeSessions.stats` procedure — both are thin shells over the
+	 * shared server-core collector.
+	 */
+	stats: authedProcedure
+		.input(z.object({ worktreePath: z.string() }))
+		.query(({ input }) => readLatestSessionStats(input.worktreePath)),
 
 	/**
 	 * Bind a chosen native session to an existing Workspace's worktree: copy the

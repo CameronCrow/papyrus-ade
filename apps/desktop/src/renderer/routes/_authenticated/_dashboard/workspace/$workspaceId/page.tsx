@@ -170,10 +170,11 @@ function WorkspacePage() {
 	const spawnSession = useCallback(() => {
 		return spawnAgentSession({
 			id: workspaceId,
+			name: workspace?.name ?? null,
 			runtime: workspace?.runtime ?? null,
 			worktreePath: workspace?.worktreePath ?? null,
 		});
-	}, [spawnAgentSession, workspaceId, workspace?.runtime, workspace?.worktreePath]);
+	}, [spawnAgentSession, workspaceId, workspace?.name, workspace?.runtime, workspace?.worktreePath]);
 
 	// Wait for the persisted tabs store to hydrate before deciding whether an
 	// agent has any existing session — otherwise we'd race persistence and

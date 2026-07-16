@@ -9,6 +9,12 @@ import { useTabsWithPresets } from "./useTabsWithPresets";
 /** Minimal shape needed to spawn an agent's runtime CLI session. */
 export interface AgentSessionWorkspace {
 	id: string;
+	/**
+	 * Display name for the session tab — pass the agent's (workspace's) name so
+	 * tabs carry the agent's durable identity instead of a generic runtime label
+	 * (issue #36). Falls back to the runtime label when absent.
+	 */
+	name?: string | null;
 	runtime?: AgentRuntime | null;
 	worktreePath?: string | null;
 }
@@ -26,7 +32,7 @@ export function useAgentSession() {
 
 	const spawnAgentSession = useCallback(
 		(workspace: AgentSessionWorkspace) => {
-			const { id, runtime, worktreePath } = workspace;
+			const { id, name, runtime, worktreePath } = workspace;
 			const cwd = worktreePath || undefined;
 
 			if (!runtime) {
@@ -36,7 +42,7 @@ export function useAgentSession() {
 
 			const preset: TerminalPreset = {
 				id: `agent-${runtime}`,
-				name: AGENT_LABELS[runtime] ?? runtime,
+				name: name?.trim() || AGENT_LABELS[runtime] || runtime,
 				cwd: worktreePath ?? "",
 				commands: AGENT_PRESET_COMMANDS[runtime],
 				executionMode: "new-tab",

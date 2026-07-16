@@ -3,6 +3,7 @@ import {
 	appendFile,
 	copyFile,
 	mkdir,
+	open,
 	readdir,
 	readFile,
 	stat,
@@ -254,6 +255,152 @@ export async function listSessionsForRepo(
 	}
 	out.sort((a, b) => b.lastModified - a.lastModified);
 	return out;
+}
+
+// ---------------------------------------------------------------------------
+// Live session stats (issue #36)
+// ---------------------------------------------------------------------------
+
+/**
+ * Live stats for the most recent Claude Code session in a worktree: the model
+ * the session is currently running and a context-size estimate. Both come from
+ * the newest transcript's latest assistant turn — Claude Code stamps every
+ * assistant JSONL record with `message.model` and `message.usage`, and that
+ * turn's input + cache-read + cache-creation + output token sum is what the
+ * model most recently saw as its context. Polled by the session tab strip.
+ */
+export interface ClaudeSessionStats {
+	/** Session UUID of the transcript the stats came from. */
+	sessionId: string;
+	/** Model id from the latest assistant turn (e.g. "claude-opus-4-8"). */
+	model: string | null;
+	/**
+	 * Context-size estimate in tokens: the latest assistant turn's
+	 * input + cache_read + cache_creation + output token sum.
+	 */
+	contextTokens: number | null;
+	/** Transcript mtime in epoch ms (how fresh these stats are). */
+	lastModified: number;
+}
+
+/**
+ * Assistant turns recur constantly in an active session, so reading only this
+ * much of the transcript tail nearly always finds one; a full read is the
+ * fallback for pathological transcripts (e.g. one giant trailing tool result).
+ */
+const STATS_TAIL_BYTES = 256 * 1024;
+
+/** Scan JSONL lines backwards for the latest assistant turn's model + usage. */
+function extractStatsFromLines(
+	lines: string[],
+): { model: string | null; contextTokens: number | null } | null {
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const trimmed = lines[i].trim();
+		if (!trimmed) continue;
+		let record: Record<string, unknown>;
+		try {
+			record = JSON.parse(trimmed);
+		} catch {
+			continue; // partial line from a tail read, or junk
+		}
+		if (record.type !== "assistant") continue;
+		// Subagent (sidechain) turns run their own context — skip them.
+		if (record.isSidechain === true) continue;
+		const message = record.message as
+			| { model?: unknown; usage?: unknown }
+			| undefined;
+		const model = typeof message?.model === "string" ? message.model : null;
+		// "<synthetic>" marks injected error turns, not a real model response.
+		if (model?.startsWith("<")) continue;
+
+		let contextTokens: number | null = null;
+		const usage = message?.usage;
+		if (usage && typeof usage === "object") {
+			const u = usage as Record<string, unknown>;
+			const n = (v: unknown) => (typeof v === "number" ? v : 0);
+			const total =
+				n(u.input_tokens) +
+				n(u.cache_read_input_tokens) +
+				n(u.cache_creation_input_tokens) +
+				n(u.output_tokens);
+			if (total > 0) contextTokens = total;
+		}
+		if (model == null && contextTokens == null) continue;
+		return { model, contextTokens };
+	}
+	return null;
+}
+
+/**
+ * Read live stats for the newest Claude Code session that ran in `cwd`
+ * (a Workspace's worktree path). Uses the same newest-JSONL-for-cwd heuristic
+ * as the desktop's session journal: the most-recently-modified transcript in
+ * the worktree's `~/.claude/projects` bucket is "the" session for that
+ * worktree. Returns null when the worktree has no Claude sessions at all —
+ * callers degrade gracefully (e.g. codex/opencode-only workspaces).
+ */
+export async function readLatestSessionStats(
+	cwd: string,
+): Promise<ClaudeSessionStats | null> {
+	const dir = join(getClaudeProjectsRoot(), encodeClaudeProjectDir(cwd));
+	const files = await listTranscriptFiles(dir);
+
+	let newest: { path: string; mtime: number; size: number } | null = null;
+	for (const file of files) {
+		try {
+			const s = await stat(file);
+			if (!newest || s.mtimeMs > newest.mtime) {
+				newest = { path: file, mtime: s.mtimeMs, size: s.size };
+			}
+		} catch {
+			// vanished between readdir and stat — skip
+		}
+	}
+	if (!newest) return null;
+
+	const tailOnly = newest.size > STATS_TAIL_BYTES;
+	let raw: string;
+	try {
+		if (tailOnly) {
+			const fh = await open(newest.path, "r");
+			try {
+				const buf = Buffer.alloc(STATS_TAIL_BYTES);
+				const { bytesRead } = await fh.read(
+					buf,
+					0,
+					STATS_TAIL_BYTES,
+					newest.size - STATS_TAIL_BYTES,
+				);
+				raw = buf.toString("utf8", 0, bytesRead);
+			} finally {
+				await fh.close();
+			}
+		} else {
+			raw = await readFile(newest.path, "utf8");
+		}
+	} catch {
+		return null;
+	}
+
+	let stats = extractStatsFromLines(raw.split("\n"));
+	if (!stats && tailOnly) {
+		// No assistant turn in the tail — fall back to the whole transcript.
+		try {
+			stats = extractStatsFromLines(
+				(await readFile(newest.path, "utf8")).split("\n"),
+			);
+		} catch {
+			return null;
+		}
+	}
+	if (!stats) return null;
+
+	return {
+		sessionId: basename(newest.path).replace(/\.jsonl$/, ""),
+		model: stats.model,
+		contextTokens: stats.contextTokens,
+		lastModified: newest.mtime,
+	};
 }
 
 // ---------------------------------------------------------------------------

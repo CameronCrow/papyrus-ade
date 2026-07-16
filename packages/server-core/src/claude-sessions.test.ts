@@ -4,6 +4,7 @@ import {
 	mkdirSync,
 	readFileSync,
 	rmSync,
+	utimesSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -212,6 +213,113 @@ describe("scanClaudeSessions", () => {
 	it("listSessionsForRepo returns that repo's sessions", async () => {
 		const sessions = await mod.listSessionsForRepo(REPO_A);
 		expect(sessions.map((s) => s.sessionId)).toContain(SESSION_ID);
+	});
+});
+
+describe("readLatestSessionStats", () => {
+	// Own repo/bucket so these fixtures never disturb the REPO_A ordering
+	// assertions above.
+	const REPO_B = join(TEST_HOME, "code", "repo-b");
+	const OLD_SESSION = "aaaaaaaa-1111-2222-3333-444444444444";
+	const NEW_SESSION = "bbbbbbbb-1111-2222-3333-444444444444";
+
+	const assistantTurn = (
+		model: string,
+		usage: Record<string, number>,
+		extra: Record<string, unknown> = {},
+	) => ({
+		type: "assistant",
+		message: {
+			role: "assistant",
+			model,
+			content: [{ type: "text", text: "..." }],
+			usage,
+		},
+		...extra,
+	});
+
+	beforeAll(() => {
+		const bucket = join(
+			mod.getClaudeProjectsRoot(),
+			mod.encodeClaudeProjectDir(REPO_B),
+		);
+		mkdirSync(bucket, { recursive: true });
+
+		// Older transcript: a different model, must NOT win.
+		const oldLines = [
+			{ type: "user", message: { role: "user", content: "hi" }, cwd: REPO_B },
+			assistantTurn("claude-sonnet-4-5", {
+				input_tokens: 10,
+				output_tokens: 20,
+			}),
+		];
+		const oldPath = join(bucket, `${OLD_SESSION}.jsonl`);
+		writeFileSync(
+			oldPath,
+			`${oldLines.map((l) => JSON.stringify(l)).join("\n")}\n`,
+			"utf8",
+		);
+		const oldTime = new Date(Date.now() - 60 * 60 * 1000);
+		utimesSync(oldPath, oldTime, oldTime);
+
+		// Newest transcript: latest REAL assistant turn carries the stats;
+		// trailing sidechain + synthetic entries must be skipped.
+		const newLines = [
+			{ type: "user", message: { role: "user", content: "go" }, cwd: REPO_B },
+			assistantTurn("claude-opus-4-8", {
+				input_tokens: 3,
+				cache_read_input_tokens: 50_000,
+				output_tokens: 100,
+			}),
+			assistantTurn("claude-opus-4-8", {
+				input_tokens: 4,
+				cache_read_input_tokens: 120_000,
+				cache_creation_input_tokens: 2_000,
+				output_tokens: 300,
+			}),
+			assistantTurn(
+				"claude-haiku-4",
+				{ input_tokens: 1, output_tokens: 1 },
+				{ isSidechain: true },
+			),
+			{
+				type: "assistant",
+				message: {
+					role: "assistant",
+					model: "<synthetic>",
+					content: [{ type: "text", text: "error entry" }],
+				},
+			},
+		];
+		writeFileSync(
+			join(bucket, `${NEW_SESSION}.jsonl`),
+			`${newLines.map((l) => JSON.stringify(l)).join("\n")}\n`,
+			"utf8",
+		);
+	});
+
+	it("returns null when the worktree has no Claude sessions", async () => {
+		const stats = await mod.readLatestSessionStats(
+			join(TEST_HOME, "code", "never-ran-claude"),
+		);
+		expect(stats).toBeNull();
+	});
+
+	it("reads model + context tokens from the newest transcript's latest real assistant turn", async () => {
+		const stats = await mod.readLatestSessionStats(REPO_B);
+		expect(stats).not.toBeNull();
+		expect(stats?.sessionId).toBe(NEW_SESSION);
+		expect(stats?.model).toBe("claude-opus-4-8");
+		// input + cache_read + cache_creation + output of the LAST real turn
+		expect(stats?.contextTokens).toBe(4 + 120_000 + 2_000 + 300);
+		expect(stats?.lastModified).toBeGreaterThan(0);
+	});
+
+	it("tolerates a transcript with no usage data (fixture from the import tests)", async () => {
+		// REPO_A's fixture transcript has assistant turns without model/usage —
+		// stats must come back null rather than erroring.
+		const stats = await mod.readLatestSessionStats(REPO_A);
+		expect(stats).toBeNull();
 	});
 });
 
