@@ -11,9 +11,6 @@ import { electronTrpc } from "renderer/lib/electron-trpc";
  * (codex/opencode/...) degrade gracefully to name-only tabs.
  */
 
-/** Context window used for the usage estimate (Claude standard 200k). */
-const CONTEXT_WINDOW_TOKENS = 200_000;
-
 /** Poll cadence — the badge only mounts on the active tab, so this is one
  * lightweight tail-read every few seconds per visible workspace. */
 const POLL_INTERVAL_MS = 5_000;
@@ -47,17 +44,12 @@ export function SessionStatsBadge({ workspaceId }: SessionStatsBadgeProps) {
 
 	if (!stats || (!stats.model && stats.contextTokens == null)) return null;
 
-	const pct =
-		stats.contextTokens != null
-			? Math.min(
-					100,
-					Math.round((stats.contextTokens / CONTEXT_WINDOW_TOKENS) * 100),
-				)
-			: null;
-
+	// Raw token count, not a percentage: transcripts don't record the session's
+	// context-window size (200k vs 1M beta), so any % against an assumed window
+	// is wrong for 1M sessions — and pins at a capped 100% once past 200k.
 	const parts: string[] = [];
 	if (stats.model) parts.push(shortModelName(stats.model));
-	if (pct != null) parts.push(`${pct}%`);
+	if (stats.contextTokens != null) parts.push(formatTokens(stats.contextTokens));
 
 	return (
 		<Tooltip delayDuration={300}>
@@ -70,10 +62,7 @@ export function SessionStatsBadge({ workspaceId }: SessionStatsBadgeProps) {
 				<div className="space-y-0.5">
 					{stats.model && <div>Model: {stats.model}</div>}
 					{stats.contextTokens != null && (
-						<div>
-							Context: ~{formatTokens(stats.contextTokens)} tokens
-							{pct != null ? ` (${pct}% of ${formatTokens(CONTEXT_WINDOW_TOKENS)})` : ""}
-						</div>
+						<div>Context: ~{formatTokens(stats.contextTokens)} tokens</div>
 					)}
 					<div className="text-muted-foreground">
 						From the newest Claude session in this worktree
