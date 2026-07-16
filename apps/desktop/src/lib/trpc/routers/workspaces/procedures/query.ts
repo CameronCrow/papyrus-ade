@@ -21,7 +21,7 @@ interface AgentFileEntry {
 	/** Display label (e.g. "AGENT.md", "memories/foo.md", "skills/x/SKILL.md"). */
 	label: string;
 	/** Coarse grouping for the UI. */
-	group: "Memory" | "Skills" | "Worktree" | "Imported";
+	group: "Memory" | "Skills" | "Mail" | "Worktree" | "Imported";
 	/** Absolute path on disk. */
 	absolutePath: string;
 	/** Worktree-relative path when the file lives inside the worktree, else null. */
@@ -106,6 +106,27 @@ function collectAgentFiles(agentId: string): AgentFileEntry[] {
 			absolutePath: abs,
 			relativeToWorktree: null,
 		});
+	}
+
+	// Agent-mail threads (issue #45): archived exchanges under mail/{inbox,sent}.
+	const mailDir = join(getAgentHome(agentId), "mail");
+	for (const box of ["inbox", "sent"] as const) {
+		const dir = join(mailDir, box);
+		if (!existsSync(dir)) continue;
+		try {
+			for (const name of readdirSync(dir)) {
+				if (name.endsWith(".md")) {
+					entries.push({
+						label: `mail/${box}/${name}`,
+						group: "Mail",
+						absolutePath: join(dir, name),
+						relativeToWorktree: null,
+					});
+				}
+			}
+		} catch {
+			// ignore unreadable mail dir
+		}
 	}
 
 	// Worktree bridge file(s)

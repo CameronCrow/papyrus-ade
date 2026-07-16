@@ -5,6 +5,7 @@ import { configRouter } from "./config";
 import { externalRouter } from "./external";
 import { filesystemRouter } from "./filesystem";
 import { healthRouter } from "./health";
+import { mailRouter } from "./mail";
 import { notificationsRouter } from "./notifications";
 import { projectsRouter } from "./projects";
 import { resourceMetricsRouter } from "./resource-metrics";
@@ -27,6 +28,7 @@ export const appRouter = router({
 	workspaces: workspacesRouter,
 	filesystem: filesystemRouter,
 	health: healthRouter,
+	mail: mailRouter,
 	notifications: notificationsRouter,
 	terminal: terminalRouter,
 	uiState: uiStateRouter,

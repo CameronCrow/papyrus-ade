@@ -11,6 +11,7 @@ import { createConfigRouter } from "./config";
 import { createExternalRouter } from "./external";
 import { createFilesystemRouter } from "./filesystem";
 import { createHotkeysRouter } from "./hotkeys";
+import { createMailRouter } from "./mail";
 import { createMenuRouter } from "./menu";
 import { createNotificationsRouter } from "./notifications";
 import { createPermissionsRouter } from "./permissions";
@@ -40,6 +41,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		changes: createChangesRouter(),
 		claudeSessions: createClaudeSessionsRouter(),
 		filesystem: createFilesystemRouter(),
+		mail: createMailRouter(),
 		notifications: createNotificationsRouter(),
 		permissions: createPermissionsRouter(),
 		ports: createPortsRouter(),

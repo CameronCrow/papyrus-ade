@@ -78,7 +78,12 @@ export function backfillAgentMemory(): void {
 				// scaffoldAgentMemory itself is never called again for it. Deliver
 				// just the skills/ dir (writeIfEmpty, so nothing customized is
 				// disturbed).
-				scaffoldAgentSkills(agent.id, agent.name || "Agent", userName);
+				scaffoldAgentSkills(
+					agent.id,
+					agent.name || "Agent",
+					userName,
+					worktreePath,
+				);
 				continue;
 			}
 

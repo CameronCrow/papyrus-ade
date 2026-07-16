@@ -37,7 +37,7 @@ import { authedProcedure, router } from "../trpc";
 /** One entry in an agent's memory/skill surface (mirrors the desktop shape). */
 interface AgentFileEntry {
 	label: string;
-	group: "Memory" | "Skills" | "Worktree" | "Imported";
+	group: "Memory" | "Skills" | "Mail" | "Worktree" | "Imported";
 	absolutePath: string;
 	relativeToWorktree: string | null;
 }
@@ -119,6 +119,27 @@ function collectAgentFiles(agentId: string): AgentFileEntry[] {
 			absolutePath: abs,
 			relativeToWorktree: null,
 		});
+	}
+
+	// Agent-mail threads (issue #45): archived exchanges under mail/{inbox,sent}.
+	const mailDir = join(getAgentHome(agentId), "mail");
+	for (const box of ["inbox", "sent"] as const) {
+		const dir = join(mailDir, box);
+		if (!existsSync(dir)) continue;
+		try {
+			for (const name of readdirSync(dir)) {
+				if (name.endsWith(".md")) {
+					entries.push({
+						label: `mail/${box}/${name}`,
+						group: "Mail",
+						absolutePath: join(dir, name),
+						relativeToWorktree: null,
+					});
+				}
+			}
+		} catch {
+			// ignore unreadable mail dir
+		}
 	}
 
 	const claudeMd = join(getAgentWorktreePath(agentId), "CLAUDE.md");

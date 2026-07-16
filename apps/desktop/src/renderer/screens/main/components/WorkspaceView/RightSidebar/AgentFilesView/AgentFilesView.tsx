@@ -5,7 +5,7 @@ import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { ImportSessionDialog } from "./ImportSessionDialog";
 
-type AgentFileGroup = "Memory" | "Skills" | "Worktree" | "Imported";
+type AgentFileGroup = "Memory" | "Skills" | "Mail" | "Worktree" | "Imported";
 
 interface AgentFileEntry {
 	label: string;
@@ -17,6 +17,7 @@ interface AgentFileEntry {
 const GROUP_ORDER: AgentFileGroup[] = [
 	"Memory",
 	"Skills",
+	"Mail",
 	"Worktree",
 	"Imported",
 ];
