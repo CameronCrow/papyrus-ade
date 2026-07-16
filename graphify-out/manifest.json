@@ -2185,8 +2185,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/filesystem/index.ts": {
-    "mtime": 1784039983.4659946,
-    "ast_hash": "90b63411fd197a72615c8c00302df0e7",
+    "mtime": 1784208999.2339046,
+    "ast_hash": "b085c8635a6f8a16cdd538e4946b6267",
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/hotkeys/index.ts": {
@@ -2195,8 +2195,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/index.ts": {
-    "mtime": 1784039983.4691727,
-    "ast_hash": "fc079f990dcfe88108ab102f968c65a4",
+    "mtime": 1784214657.5623937,
+    "ast_hash": "524e43947cff4e02a3f5dbf2cb947c95",
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/menu.ts": {
@@ -2390,8 +2390,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/workspaces/procedures/query.ts": {
-    "mtime": 1784039983.4823518,
-    "ast_hash": "6207e51800f818efac13c08aa31fa8b5",
+    "mtime": 1784144433.8863323,
+    "ast_hash": "cac816c11cae7d63401b4cb6fe5dc0bb",
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/workspaces/procedures/status.ts": {
@@ -3090,8 +3090,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/components/TopBar/components/ResourceConsumption/ResourceConsumption.tsx": {
-    "mtime": 1784039983.6094215,
-    "ast_hash": "c24ecf04c4a06e1c8d48318283c654a1",
+    "mtime": 1784214684.4710784,
+    "ast_hash": "0d06fcea6bac5d70908291cfa83e52d6",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/components/TopBar/components/ResourceConsumption/index.ts": {
@@ -4725,8 +4725,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/BrowserPane/BrowserPane.tsx": {
-    "mtime": 1784039983.7540894,
-    "ast_hash": "e2e831bc7b8a08ff57ef68f0488379e1",
+    "mtime": 1784144433.8873374,
+    "ast_hash": "ae7235e2ca42f88a4cf816257c423f8b",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/BrowserPane/components/BrowserErrorOverlay/BrowserErrorOverlay.tsx": {
@@ -5205,8 +5205,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/RightSidebar/AgentFilesView/AgentFilesView.tsx": {
-    "mtime": 1784039983.801298,
-    "ast_hash": "cc89f4812913ce479b8b3eebce322f41",
+    "mtime": 1784144433.8899498,
+    "ast_hash": "da4b4ecfec1dc224fb00b332e9bbcdfb",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/RightSidebar/AgentFilesView/index.ts": {
@@ -6220,8 +6220,8 @@
     "semantic_hash": ""
   },
   "apps/server/src/routers/index.ts": {
-    "mtime": 1784134573.2230992,
-    "ast_hash": "1d40c3fab4cd2c9296f2e15e1797422a",
+    "mtime": 1784214655.0332427,
+    "ast_hash": "b15d35cc2ff67b818179aa8c4449e0a7",
     "semantic_hash": ""
   },
   "apps/server/src/routers/notifications.ts": {
@@ -6255,8 +6255,8 @@
     "semantic_hash": ""
   },
   "apps/server/src/routers/workspaces.ts": {
-    "mtime": 1784121607.4138281,
-    "ast_hash": "3740fd6e918876b196f3f692dcdd3839",
+    "mtime": 1784211932.6926606,
+    "ast_hash": "645de6e2898f8df29150009cd750ceba",
     "semantic_hash": ""
   },
   "apps/server/src/server.ts": {
@@ -8105,8 +8105,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1784121607.3982382,
-    "ast_hash": "50d8d826004958b92efe6461df05dd39",
+    "mtime": 1784208999.2339046,
+    "ast_hash": "754670d2f86c72ec26fc8cae65273e81",
     "semantic_hash": ""
   },
   "THIRD-PARTY-NOTICES.md": {
@@ -8290,8 +8290,8 @@
     "semantic_hash": ""
   },
   "apps/webui/index.html": {
-    "mtime": 1784039984.277657,
-    "ast_hash": "bb170430a336c7a51fca1f7340780418",
+    "mtime": 1784208999.2427397,
+    "ast_hash": "e6494846da71e7075e7298beec8bbfed",
     "semantic_hash": ""
   },
   "docs/cookbook/README.md": {
@@ -8322,11 +8322,6 @@
   "docs/tickets/voice-realtime-task-launcher.md": {
     "mtime": 1784052014.7556305,
     "ast_hash": "799c87f32ab0a3e0e138a1cdd30be14b",
-    "semantic_hash": ""
-  },
-  "outputs/work/code/pr-31-review.md": {
-    "mtime": 1784141511.5179305,
-    "ast_hash": "fef4c46f724d2db5dd0f57edda7e4139",
     "semantic_hash": ""
   },
   "packages/email/README.md": {
@@ -8620,18 +8615,18 @@
     "semantic_hash": ""
   },
   "apps/webui/public/apple-touch-icon.png": {
-    "mtime": 1784039984.277657,
-    "ast_hash": "dd6fe2dd08905ccacc2cac3963136af5",
+    "mtime": 1784208999.2441883,
+    "ast_hash": "45dd7091456e4fdeda92b5d118735496",
     "semantic_hash": ""
   },
   "apps/webui/public/pwa-icon-192.png": {
-    "mtime": 1784039984.2796671,
-    "ast_hash": "dd6fe2dd08905ccacc2cac3963136af5",
+    "mtime": 1784208999.2441883,
+    "ast_hash": "52271f1eb52dd90f879a87d03398987b",
     "semantic_hash": ""
   },
   "apps/webui/public/pwa-icon-512.png": {
-    "mtime": 1784039984.2796671,
-    "ast_hash": "dd6fe2dd08905ccacc2cac3963136af5",
+    "mtime": 1784208999.2441883,
+    "ast_hash": "d0836c0514bc5a35928aad2207d07b0b",
     "semantic_hash": ""
   },
   "assets/example.png": {
@@ -8707,6 +8702,86 @@
   "apps/desktop/src/resources/sounds/supersetquick.mp3": {
     "mtime": 1784039983.8739653,
     "ast_hash": "14f4b560e1ad40688eb1b88fcb958007",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/lib/trpc/routers/claude-sessions/index.ts": {
+    "mtime": 1784144433.8850076,
+    "ast_hash": "544e5cd7711754f9d496b1262f01c6da",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/lib/trpc/routers/usage.ts": {
+    "mtime": 1784214645.9219234,
+    "ast_hash": "5d9d6951396973d77bde8d7d89db9504",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/BrowserPane/BrowserPaneDesktop.tsx": {
+    "mtime": 1784144433.8883376,
+    "ast_hash": "a20b550a9a2f9c0c02ed647a266b37f6",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/BrowserPane/BrowserPaneWeb.tsx": {
+    "mtime": 1784144433.8883376,
+    "ast_hash": "8430e9d908e5ad6febc6ef9ef5e365e4",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/BrowserPane/types.ts": {
+    "mtime": 1784144433.8899498,
+    "ast_hash": "ac3d9be11c695675c82fe189cf90ad82",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/RightSidebar/AgentFilesView/ImportSessionDialog.tsx": {
+    "mtime": 1784144433.8923087,
+    "ast_hash": "3eb92ebf23127c80f5bdfb2bfbc4a62f",
+    "semantic_hash": ""
+  },
+  "apps/server/src/routers/claude-sessions.ts": {
+    "mtime": 1784144433.8923087,
+    "ast_hash": "91db0f025c88931e307901edcfa1bdd9",
+    "semantic_hash": ""
+  },
+  "apps/server/src/routers/usage.ts": {
+    "mtime": 1784214644.10599,
+    "ast_hash": "a58dd2b8b9a0e3d4d9f242d60b8c7b60",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/claude-sessions.test.ts": {
+    "mtime": 1784144433.8953178,
+    "ast_hash": "b284e7db593d8b2de74418e5aa651dcf",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/claude-sessions.ts": {
+    "mtime": 1784144433.8953178,
+    "ast_hash": "d09d504d1da3e50207f946a85aad742f",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/provider-usage.test.ts": {
+    "mtime": 1784214641.3078637,
+    "ast_hash": "1ba0b3a521fd15d1b78a7b0ac3eb81aa",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/provider-usage.ts": {
+    "mtime": 1784215650.320975,
+    "ast_hash": "7ab569cfcb92f5f25bb9f99be18237b2",
+    "semantic_hash": ""
+  },
+  "scripts/generate-icons.mjs": {
+    "mtime": 1784208999.2441883,
+    "ast_hash": "613a3d89794562eb624ea9c1bc4196e6",
+    "semantic_hash": ""
+  },
+  ".github/workflows/release.yml": {
+    "mtime": 1784208999.2339046,
+    "ast_hash": "48dba39e1a3bab82900c203b1bc3b3b1",
+    "semantic_hash": ""
+  },
+  "apps/webui/public/favicon-32.png": {
+    "mtime": 1784208999.2441883,
+    "ast_hash": "b10dd199bd037e775426ea63b0a22780",
+    "semantic_hash": ""
+  },
+  "apps/webui/public/favicon.svg": {
+    "mtime": 1784208999.2441883,
+    "ast_hash": "4a30011652720fe6c3d6b19eb5d0732d",
     "semantic_hash": ""
   }
 }
