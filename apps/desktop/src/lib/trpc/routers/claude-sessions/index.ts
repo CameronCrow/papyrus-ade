@@ -1,6 +1,7 @@
 import {
 	importClaudeSession,
 	listSessionsForRepo,
+	readLatestSessionStats,
 	scanClaudeSessions,
 } from "@papyrus/server-core/claude-sessions";
 import { workspaces } from "@superset/local-db";
@@ -37,6 +38,16 @@ export const createClaudeSessionsRouter = () => {
 				}
 				return scanClaudeSessions();
 			}),
+
+		/**
+		 * Live stats for the newest Claude Code session in a worktree (issue
+		 * #36): active model + context-size estimate from the latest assistant
+		 * turn. Polled by the session tab strip; null when the worktree has no
+		 * Claude sessions (non-Claude runtimes degrade to name-only tabs).
+		 */
+		stats: publicProcedure
+			.input(z.object({ worktreePath: z.string() }))
+			.query(({ input }) => readLatestSessionStats(input.worktreePath)),
 
 		import: publicProcedure
 			.input(

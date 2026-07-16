@@ -22,6 +22,7 @@ import { useTabsStore } from "renderer/stores/tabs/store";
 import type { PaneStatus, Tab } from "renderer/stores/tabs/types";
 import { getTabDisplayName } from "renderer/stores/tabs/utils";
 import { TERMINAL_PROFILES } from "shared/terminal-profiles";
+import { SessionStatsBadge } from "./SessionStatsBadge";
 
 export const TAB_TYPE = "TAB";
 
@@ -240,6 +241,11 @@ export function GroupItem({
 							<span className="text-sm truncate flex-1 text-left">
 								{displayName}
 							</span>
+							{/* Live model + context usage for the active session tab
+							    (issue #36); renders nothing for non-Claude sessions. */}
+							{isActive && isTerminalTab && (
+								<SessionStatsBadge workspaceId={tab.workspaceId} />
+							)}
 							{status && status !== "idle" && (
 								<StatusIndicator status={status} />
 							)}
