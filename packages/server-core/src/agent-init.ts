@@ -4,8 +4,9 @@ import { eq } from "drizzle-orm";
 import { localDb } from "./local-db";
 import { workspaceInitManager } from "./workspace-init-manager";
 import { MEMORY_SCAFFOLD_ENABLED } from "./feature-flags";
+import { duplicateAgentPersona } from "./agent-duplicate";
 import { type AgentRepoSource, setupAgentRepo } from "./agent-repo";
-import { scaffoldAgentMemory } from "./agent-scaffold";
+import { regenerateCodexAgentsMd, scaffoldAgentMemory } from "./agent-scaffold";
 import { resolveAgentWorktreePath } from "./agent-worktree";
 import { getUserName } from "./user-profile";
 
@@ -29,6 +30,17 @@ interface AgentInitContext {
 	role?: string;
 	runtime: AgentRuntime;
 	source: AgentRepoSource;
+	/**
+	 * Create-from-existing (issue #41): after the normal scaffold, copy the
+	 * source agent's persona (AGENT.md re-stamped, USER.md, skills/**) over the
+	 * fresh templates. Held in the same in-memory context as the rest — a
+	 * cross-restart retry falls back to a plain (non-duplicating) init.
+	 */
+	duplicateFrom?: {
+		sourceAgentId: string;
+		sourceAgentName: string;
+		includeLessons: boolean;
+	};
 }
 
 const contexts = new Map<string, AgentInitContext>();
@@ -133,6 +145,30 @@ async function runAgentInit(agentId: string): Promise<void> {
 				userName: getUserName(),
 				worktreePath: resolveAgentWorktreePath(agentId, ctx.worktreeId),
 			});
+
+			// Create-from-existing: copy the source persona OVER the fresh
+			// scaffold (writeIfEmpty never overwrites, so ordering matters —
+			// the duplicate flow's plain writes must run after the scaffold).
+			if (ctx.duplicateFrom) {
+				workspaceInitManager.updateProgress(
+					agentId,
+					"scaffolding_memory",
+					`Copying persona from ${ctx.duplicateFrom.sourceAgentName}...`,
+				);
+				duplicateAgentPersona({
+					source: {
+						agentId: ctx.duplicateFrom.sourceAgentId,
+						agentName: ctx.duplicateFrom.sourceAgentName,
+					},
+					target: { agentId, agentName: ctx.agentName },
+					includeLessons: ctx.duplicateFrom.includeLessons,
+				});
+				// The scaffold generated the codex concat bridge BEFORE the
+				// persona landed — rebuild it from the copied canonical files.
+				if (ctx.runtime === "codex") {
+					regenerateCodexAgentsMd(agentId);
+				}
+			}
 		}
 
 		// A non-null gitStatus marks the worktree as set up so the content view

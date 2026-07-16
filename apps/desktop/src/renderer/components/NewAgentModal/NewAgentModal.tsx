@@ -6,6 +6,7 @@ import {
 } from "@superset/shared/agent-binaries";
 import { AGENT_LABELS } from "@superset/shared/agent-command";
 import { Button } from "@superset/ui/button";
+import { Checkbox } from "@superset/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -63,6 +64,10 @@ export function NewAgentModal() {
 
 	const [name, setName] = useState("");
 	const [role, setRole] = useState("");
+	// Create-from-existing (issue #41): "" = start fresh; otherwise the source
+	// agent whose persona (AGENT.md re-stamped, USER.md, skills) is copied.
+	const [sourceAgentId, setSourceAgentId] = useState("");
+	const [includeLessons, setIncludeLessons] = useState(false);
 	const [runtime, setRuntime] =
 		useState<(typeof AGENT_RUNTIMES)[number]>("claude");
 	const [repoMode, setRepoMode] = useState<RepoMode>("init");
@@ -76,11 +81,28 @@ export function NewAgentModal() {
 	const createAgent = electronTrpc.workspaces.createAgent.useMutation();
 	const setWorkspaceIcon = electronTrpc.workspaces.setWorkspaceIcon.useMutation();
 
+	// Existing agents (grouped by team) — the source pool for
+	// "create from existing agent". Reuses the sidebar's grouped query.
+	const groupedAgents = electronTrpc.workspaces.getAllGrouped.useQuery(
+		undefined,
+		{ enabled: isOpen },
+	);
+	const sourceAgentOptions = (groupedAgents.data ?? []).flatMap((group) =>
+		group.workspaces
+			.filter((w) => w.runtime != null)
+			.map((w) => ({
+				id: w.id,
+				label: `${group.project.name} · ${w.name}`,
+			})),
+	);
+
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset each open
 	useEffect(() => {
 		if (!isOpen) return;
 		setName("");
 		setRole("");
+		setSourceAgentId("");
+		setIncludeLessons(false);
 		setRuntime("claude");
 		setRepoMode("init");
 		setCloneUrl("");
@@ -123,7 +145,9 @@ export function NewAgentModal() {
 			const result = await createAgent.mutateAsync({
 				projectId: categoryId,
 				name: name.trim(),
-				role: role.trim() || undefined,
+				// The copied persona's AGENT.md supersedes a typed role, so the
+				// Role field is hidden (and dropped) when a source is picked.
+				role: sourceAgentId ? undefined : role.trim() || undefined,
 				runtime,
 				repo:
 					repoMode === "clone"
@@ -131,6 +155,9 @@ export function NewAgentModal() {
 						: repoMode === "local"
 							? { type: "clone", url: localPath.trim() }
 							: { type: "init" },
+				duplicateFrom: sourceAgentId
+					? { agentId: sourceAgentId, includeLessons }
+					: undefined,
 			});
 			if (photoDataUrl) {
 				await setWorkspaceIcon.mutateAsync({
@@ -203,17 +230,58 @@ export function NewAgentModal() {
 					/>
 
 					<div className="flex flex-col gap-1.5">
-						<Label htmlFor="agent-role">Role</Label>
-						<Textarea
-							id="agent-role"
-							value={role}
-							onChange={(e) => setRole(e.target.value)}
-							rows={2}
-							maxLength={280}
-							placeholder="What is this agent? (optional — you can also just talk with the agent and shape it together)"
-							className="resize-none"
-						/>
+						<Label>Persona</Label>
+						<Select
+							value={sourceAgentId || "blank"}
+							onValueChange={(v) => {
+								setSourceAgentId(v === "blank" ? "" : v);
+								if (v === "blank") setIncludeLessons(false);
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="blank">Start fresh</SelectItem>
+								{sourceAgentOptions.map((a) => (
+									<SelectItem key={a.id} value={a.id}>
+										Copy from {a.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						{sourceAgentId && (
+							<>
+								<p className="text-xs text-muted-foreground">
+									Copies the source agent's persona (AGENT.md, USER.md,
+									skills) re-stamped for the new agent. Project memory stays
+									fresh; the source agent is untouched.
+								</p>
+								<label className="flex items-center gap-2 text-sm font-normal">
+									<Checkbox
+										checked={includeLessons}
+										onCheckedChange={(v) => setIncludeLessons(v === true)}
+									/>
+									Also carry over Lessons (tool quirks that hold anywhere)
+								</label>
+							</>
+						)}
 					</div>
+
+					{!sourceAgentId && (
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="agent-role">Role</Label>
+							<Textarea
+								id="agent-role"
+								value={role}
+								onChange={(e) => setRole(e.target.value)}
+								rows={2}
+								maxLength={280}
+								placeholder="What is this agent? (optional — you can also just talk with the agent and shape it together)"
+								className="resize-none"
+							/>
+						</div>
+					)}
 
 					<div className="flex flex-col gap-1.5">
 						<Label>Runtime</Label>
