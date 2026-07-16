@@ -30,7 +30,7 @@ import {
 } from "@papyrus/server-core/workspaces/db-helpers";
 import { projects, workspaces, worktrees } from "@superset/local-db";
 import { observable } from "@trpc/server/observable";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import { authedProcedure, router } from "../trpc";
 
@@ -154,6 +154,34 @@ function collectAgentFiles(agentId: string): AgentFileEntry[] {
 	return entries;
 }
 
+/** Returns workspace IDs in sidebar visual order (by project.tabOrder, then workspace.tabOrder). */
+function getWorkspacesInVisualOrder(): string[] {
+	const activeProjects = localDb
+		.select()
+		.from(projects)
+		.where(isNotNull(projects.tabOrder))
+		.all()
+		.sort((a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0));
+
+	const allWorkspaces = localDb
+		.select()
+		.from(workspaces)
+		.where(isNull(workspaces.deletingAt))
+		.all();
+
+	const orderedIds: string[] = [];
+	for (const project of activeProjects) {
+		const projectWorkspaces = allWorkspaces
+			.filter((w) => w.projectId === project.id)
+			.sort((a, b) => a.tabOrder - b.tabOrder);
+		for (const ws of projectWorkspaces) {
+			orderedIds.push(ws.id);
+		}
+	}
+
+	return orderedIds;
+}
+
 /**
  * Agents (workspaces) — server mirror of the desktop router paths. Thin
  * shells over the extracted core (agent-init, workspace-init-manager,
@@ -264,6 +292,38 @@ export const workspacesRouter = router({
 					})),
 			}));
 	}),
+
+	getPreviousWorkspace: authedProcedure
+		.input(z.object({ id: z.string() }))
+		.query(({ input }) => {
+			const orderedWorkspaceIds = getWorkspacesInVisualOrder();
+			if (orderedWorkspaceIds.length === 0) return null;
+
+			const currentIndex = orderedWorkspaceIds.indexOf(input.id);
+			if (currentIndex === -1) return null;
+
+			const prevIndex =
+				currentIndex === 0
+					? orderedWorkspaceIds.length - 1
+					: currentIndex - 1;
+			return orderedWorkspaceIds[prevIndex];
+		}),
+
+	getNextWorkspace: authedProcedure
+		.input(z.object({ id: z.string() }))
+		.query(({ input }) => {
+			const orderedWorkspaceIds = getWorkspacesInVisualOrder();
+			if (orderedWorkspaceIds.length === 0) return null;
+
+			const currentIndex = orderedWorkspaceIds.indexOf(input.id);
+			if (currentIndex === -1) return null;
+
+			const nextIndex =
+				currentIndex === orderedWorkspaceIds.length - 1
+					? 0
+					: currentIndex + 1;
+			return orderedWorkspaceIds[nextIndex];
+		}),
 
 	createAgent: authedProcedure.input(createAgentInput).mutation(({ input }) => {
 		const project = getProject(input.projectId);
