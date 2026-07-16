@@ -85,6 +85,44 @@ describe("scaffoldAgentMemory — canonical layout", () => {
 		expect(existsSync(join(skills, "SKILL.template.md"))).toBe(true);
 	});
 
+	it("seeds the built-in adopt-persona skill (#42)", () => {
+		const skillPath = join(
+			getAgentHome(agentId),
+			"skills",
+			"adopt-persona",
+			"SKILL.md",
+		);
+		expect(existsSync(skillPath)).toBe(true);
+		const skill = readFileSync(skillPath, "utf8");
+		// agentskills.io frontmatter, same doctrine as SKILL.template.md.
+		expect(skill).toContain("name: adopt-persona");
+		expect(skill).toContain("description:");
+		const description = skill.match(/^description:\s*(.+)$/m)?.[1] ?? "";
+		expect(description.length).toBeLessThanOrEqual(60);
+		expect(skill).toContain("version:");
+		expect(skill).toContain("metadata:");
+		// Canonical body section order.
+		for (const section of [
+			"## When to Use",
+			"## Prerequisites",
+			"## Procedure",
+			"## Pitfalls",
+			"## Verification",
+		]) {
+			expect(skill).toContain(section);
+		}
+		// Variables substituted — this agent's own identity, never the source's.
+		expect(skill).toContain("Testy");
+		expect(skill).not.toMatch(/\{\{\w+\}\}/);
+		// Behavior spec from #42: keep own identity, merge Role/Standing prefs,
+		// copy missing skills (own wins), merge USER.md, never adopt MEMORY.md.
+		expect(skill).toContain("## Role");
+		expect(skill).toContain("## Standing");
+		expect(skill).toContain("keep your own");
+		expect(skill).toContain("Do NOT adopt");
+		expect(skill).toContain("MEMORY.md");
+	});
+
 	it("SKILL template carries the Hermes frontmatter + section order", () => {
 		const tpl = readFileSync(
 			join(getAgentHome(agentId), "skills", "SKILL.template.md"),
@@ -452,6 +490,20 @@ describe("backfillAgentMemory — one-time migration of pre-flip agents", () => 
 		);
 		// Skipped before scaffolding, so the other canonical files were not created.
 		expect(fs.existsSync(join(mem, "USER.md"))).toBe(false);
+	});
+
+	it("still delivers newly-added built-in skills to an already-authored agent (#42)", () => {
+		// Memory is skipped entirely (previous test), but skills/ is a separate,
+		// always-topped-up surface — the whole point of the scaffoldAgentSkills
+		// fallback: a hand-authored AGENT.md shouldn't block a new built-in skill.
+		const skillPath = join(
+			getAgentHome(AUTHORED),
+			"skills",
+			"adopt-persona",
+			"SKILL.md",
+		);
+		expect(fs.existsSync(skillPath)).toBe(true);
+		expect(readFileSync(skillPath, "utf8")).toContain("name: adopt-persona");
 	});
 
 	it("skips an agent with no repo yet", () => {

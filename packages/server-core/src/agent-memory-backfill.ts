@@ -3,27 +3,36 @@ import { join } from "node:path";
 import { workspaces } from "@superset/local-db";
 import { isNotNull } from "drizzle-orm";
 import { getAgentMemoryDir } from "./agent-home";
-import { scaffoldAgentMemory } from "./agent-scaffold";
+import { scaffoldAgentMemory, scaffoldAgentSkills } from "./agent-scaffold";
 import { resolveAgentWorktreePath } from "./agent-worktree";
 import { MEMORY_SCAFFOLD_ENABLED } from "./feature-flags";
 import { localDb } from "./local-db";
 import { getUserName } from "./user-profile";
 
 /**
- * One-time backfill of the per-agent memory scaffold (docs/memory.md).
+ * Launch-time backfill of the per-agent memory scaffold (docs/memory.md).
  *
  * Agents created while ADE_MEMORY_SCAFFOLD was OFF have a repo + an empty
  * memory/ dir but no canonical files or bridges. Now that the scaffold is
- * enabled by default we bring those agents up to spec at app launch.
+ * enabled by default we bring those agents up to spec at app launch — the
+ * "one-time migration" case.
+ *
+ * A second, ongoing case: agents that were already fully scaffolded (or had
+ * AGENT.md hand-authored) before a new built-in skill was added. Their
+ * memory/ dir is non-empty, so scaffoldAgentMemory is never called again for
+ * them — but they still need newly-added built-ins (e.g. adopt-persona, #42)
+ * delivered to skills/, which scaffoldAgentSkills does without touching
+ * canonical memory.
  *
  * Conservative + idempotent by construction:
  * - Only touches Papyrus agents (workspaces.runtime set) whose repo is already set
  *   up (worktree/.git exists). A still-initializing or failed agent is left to
  *   its own init job.
- * - Skips any agent whose memory/ dir already holds a non-empty *.md file, so a
- *   scaffolded (or hand-authored) memory is never re-processed.
- * - Delegates to scaffoldAgentMemory, which is write-if-empty: even if it runs,
- *   it never overwrites a non-empty canonical file or an existing bridge.
+ * - An agent whose memory/ dir already holds a non-empty *.md file only gets the
+ *   skills/ top-up (scaffoldAgentSkills); its memory is never re-processed.
+ * - Both scaffoldAgentMemory and scaffoldAgentSkills are write-if-empty: neither
+ *   ever overwrites a non-empty canonical file, a customized skill, or an
+ *   existing bridge.
  * - Per-agent try/catch so one bad agent never blocks the others or app launch.
  */
 export function backfillAgentMemory(): void {
@@ -62,7 +71,16 @@ export function backfillAgentMemory(): void {
 			// out any non-Papyrus workspace that happens to carry a runtime value.
 			if (!existsSync(join(worktreePath, ".git"))) continue;
 
-			if (!memoryDirIsEmpty(getAgentMemoryDir(agent.id))) continue;
+			if (!memoryDirIsEmpty(getAgentMemoryDir(agent.id))) {
+				// Already fully scaffolded (or hand-authored before the scaffold
+				// existed) — canonical memory is left untouched by design, but a
+				// newly-added built-in skill still needs to reach this agent since
+				// scaffoldAgentMemory itself is never called again for it. Deliver
+				// just the skills/ dir (writeIfEmpty, so nothing customized is
+				// disturbed).
+				scaffoldAgentSkills(agent.id, agent.name || "Agent", userName);
+				continue;
+			}
 
 			scaffoldAgentMemory({
 				agentId: agent.id,
