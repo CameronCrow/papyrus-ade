@@ -241,7 +241,7 @@ const SKILL_TEMPLATE = `---
 name: my-skill
 description: One line, <= 60 chars, what this does.
 version: 0.1.0
-platforms: [macos, linux]
+platforms: [macos, linux, windows]
 metadata:
   ade:
     tags: [Example]
@@ -279,7 +279,7 @@ const ADOPT_PERSONA_SKILL = `---
 name: adopt-persona
 description: Adopt another agent's Role, skills, and USER facts.
 version: 0.1.0
-platforms: [macos, linux]
+platforms: [macos, linux, windows]
 metadata:
   ade:
     tags: [Persona, Memory]
