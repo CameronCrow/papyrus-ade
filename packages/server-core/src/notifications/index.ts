@@ -109,7 +109,12 @@ async function handleMailAsk(
 	}
 	let parsed: Record<string, unknown>;
 	try {
-		parsed = JSON.parse(await readBody(req));
+		const raw: unknown = JSON.parse(await readBody(req));
+		// JSON.parse can yield primitives/null — destructuring those throws.
+		if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+			return { status: 400, body: { error: "Expected a JSON object body" } };
+		}
+		parsed = raw as Record<string, unknown>;
 	} catch {
 		return { status: 400, body: { error: "Invalid JSON body" } };
 	}
@@ -249,9 +254,14 @@ export function startHookReceiver(opts?: {
 		}
 
 		if (url.pathname === "/mail/ask" && req.method === "POST") {
-			void handleMailAsk(req, opts?.mailAsk).then(({ status, body }) =>
-				sendJson(res, status, body),
-			);
+			void handleMailAsk(req, opts?.mailAsk)
+				.then(({ status, body }) => sendJson(res, status, body))
+				.catch((err) => {
+					// Last-resort guard: an escaped throw must not become an
+					// unhandled rejection (process-fatal) + a hung socket.
+					console.error("[mail] ask handler crashed:", err);
+					sendJson(res, 500, { error: "Internal error" });
+				});
 			return;
 		}
 

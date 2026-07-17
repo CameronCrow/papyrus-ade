@@ -362,11 +362,21 @@ export async function askAgent(
 		childEnv.CODEX_HOME = getAgentCodexHome(params.to.id);
 	}
 
-	const { wait } = spawnOneShot(shot, {
+	const { wait: rawWait } = spawnOneShot(shot, {
 		cwd: params.to.worktreePath,
 		env: childEnv,
 		prompt,
 	});
+	// A spawn rejection (e.g. missing runtime binary) must still finalize the
+	// thread files — fold it into a failed outcome instead of leaving both
+	// copies stuck at status: pending.
+	const wait = rawWait.catch(
+		(err): SpawnOutcome => ({
+			code: null,
+			stdout: "",
+			stderr: err instanceof Error ? err.message : String(err),
+		}),
+	);
 
 	const finalize = (outcome: SpawnOutcome, late: boolean): string => {
 		const answered = new Date().toISOString();
