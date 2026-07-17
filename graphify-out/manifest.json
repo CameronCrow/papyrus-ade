@@ -3130,8 +3130,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/page.tsx": {
-    "mtime": 1784314041.8582115,
-    "ast_hash": "fac0b9a30ae6ae1725d45a71ed41a15f",
+    "mtime": 1784315711.1895592,
+    "ast_hash": "01c4d88310e51364575001a4722bb233",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/$taskId/components/ActivitySection/ActivitySection.tsx": {
@@ -8917,6 +8917,11 @@
   "packages/server-core/src/team-dashboard.ts": {
     "mtime": 1784315061.5716815,
     "ast_hash": "c00ad1692a446256991f33e536acc1ce",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/CreateAgentWizard.tsx": {
+    "mtime": 1784315691.6390245,
+    "ast_hash": "77320502e8c9f59693b20e99aa72c3c4",
     "semantic_hash": ""
   }
 }
