@@ -2195,8 +2195,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/index.ts": {
-    "mtime": 1784314041.3636642,
-    "ast_hash": "0a572b8049fbecfc2b98a5c3cc56f1ae",
+    "mtime": 1784315089.6897976,
+    "ast_hash": "ff6bb61ee9bee8d10c24f6d4de999927",
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/menu.ts": {
@@ -6205,8 +6205,8 @@
     "semantic_hash": ""
   },
   "apps/server/src/routers/index.ts": {
-    "mtime": 1784314043.480656,
-    "ast_hash": "9e55f7b9e4181bce022475e658f7499f",
+    "mtime": 1784315125.153935,
+    "ast_hash": "bdb2fa10c4c15c388d238beb6f71cb31",
     "semantic_hash": ""
   },
   "apps/server/src/routers/notifications.ts": {
@@ -8842,6 +8842,81 @@
   "packages/server-core/src/mail-events.ts": {
     "mtime": 1784314375.407549,
     "ast_hash": "b4c44499f46e1449cec255515261d323",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/lib/trpc/routers/team-dashboard.ts": {
+    "mtime": 1784315075.9789023,
+    "ast_hash": "fcaa6b51c9efc1eb691e029e4a0ed619",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/ActivityRail.tsx": {
+    "mtime": 1784315271.0947278,
+    "ast_hash": "731d1fe87d81b6399efb7f22b2cba3f5",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/AgentCard.tsx": {
+    "mtime": 1784315237.3227036,
+    "ast_hash": "0e17f6b5df0034cf6ef6cb88183fae64",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/AgentStatusBadge.tsx": {
+    "mtime": 1784315217.0273998,
+    "ast_hash": "095f0caab53e4fb59591f1d8e83f76eb",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/BoardCard.tsx": {
+    "mtime": 1784315302.093697,
+    "ast_hash": "fa84bd49e9243ac39434cc1eb51aa205",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/BoardColumn.tsx": {
+    "mtime": 1784315313.5242805,
+    "ast_hash": "7a3ec1962041f4f97e7dff8e328d62e3",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/RosterHero.tsx": {
+    "mtime": 1784315248.1347659,
+    "ast_hash": "12ef50fb807214475f5dc343f54ad32b",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/TeamDashboard.tsx": {
+    "mtime": 1784315334.0656092,
+    "ast_hash": "27ad3fd417f090dc8dc8b043c0188140",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/WorkBoard.tsx": {
+    "mtime": 1784315323.6388025,
+    "ast_hash": "49d74fdf26a596ba7fad37fb6122507f",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/index.ts": {
+    "mtime": 1784315340.3076904,
+    "ast_hash": "975ed216d8fd220a2515ba4474105424",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/types.ts": {
+    "mtime": 1784315183.2951815,
+    "ast_hash": "27cfc6c2d6f25c06f49e6fe07695d2b0",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/useTeamDashboard.ts": {
+    "mtime": 1784315203.8031273,
+    "ast_hash": "67824635719c6da90f4ef9e5eaf2cf8b",
+    "semantic_hash": ""
+  },
+  "apps/server/src/routers/team-dashboard.ts": {
+    "mtime": 1784315103.4137764,
+    "ast_hash": "462f4e80b93e9e2e4f136602cdffc18c",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/team-dashboard.test.ts": {
+    "mtime": 1784315139.9149258,
+    "ast_hash": "e7dd8eeaca12b22ef8f9be7cc358c567",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/team-dashboard.ts": {
+    "mtime": 1784315061.5716815,
+    "ast_hash": "c00ad1692a446256991f33e536acc1ce",
     "semantic_hash": ""
   }
 }
