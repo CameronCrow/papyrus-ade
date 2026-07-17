@@ -1,16 +1,16 @@
-# Graph Report - papyrus-ade  (2026-07-17)
+# Graph Report - agent-a89e231a1765156a9  (2026-07-17)
 
 ## Corpus Check
-- 1673 files · ~1,060,804 words
+- 1675 files · ~1,066,197 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8085 nodes · 13014 edges · 583 communities (490 shown, 93 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 550 edges (avg confidence: 0.8)
+- 8129 nodes · 13081 edges · 583 communities (484 shown, 99 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 549 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b384c730`
+- Built from commit: `5de4026f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -75,7 +75,6 @@
 - [[_COMMUNITY_srcagent-setup (29 nodes)|src/agent-setup (29 nodes)]]
 - [[_COMMUNITY_workspacesutils (29 nodes)|workspaces/utils (29 nodes)]]
 - [[_COMMUNITY_srcshared (29 nodes)|src/shared (29 nodes)]]
-- [[_COMMUNITY_utilsgithub (29 nodes)|utils/github (29 nodes)]]
 - [[_COMMUNITY_packagesemail (29 nodes)|packages/email (29 nodes)]]
 - [[_COMMUNITY_routersfilesystem (29 nodes)|routers/filesystem (29 nodes)]]
 - [[_COMMUNITY_srcschema (29 nodes)|src/schema (29 nodes)]]
@@ -516,6 +515,7 @@
 - [[_COMMUNITY_Community 562|Community 562]]
 - [[_COMMUNITY_Community 565|Community 565]]
 - [[_COMMUNITY_Community 566|Community 566]]
+- [[_COMMUNITY_Community 570|Community 570]]
 - [[_COMMUNITY_Community 574|Community 574]]
 - [[_COMMUNITY_Community 575|Community 575]]
 - [[_COMMUNITY_Community 576|Community 576]]
@@ -536,11 +536,9 @@
 7. `LocalTerminalRuntime` - 35 edges
 8. `PortManager` - 31 edges
 9. `createAppRouter()` - 30 edges
-10. `useTabsStore` - 30 edges
+10. `useTabsStore` - 29 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `collectResourceMetrics()` --calls--> `getWorkspaceRuntimeRegistry()`  [INFERRED]
-  apps/desktop/src/main/lib/resource-metrics/index.ts → packages/server-core/src/workspace-runtime/registry.ts
 - `ScriptTextarea()` --calls--> `cn()`  [INFERRED]
   apps/desktop/src/renderer/routes/_authenticated/settings/project/$projectId/components/ProjectSettings/components/ScriptsEditor/ScriptsEditor.tsx → packages/ui/src/lib/utils.ts
 - `TabButton()` --calls--> `cn()`  [INFERRED]
@@ -549,6 +547,8 @@
   apps/docs/src/app/(docs)/components/Navigation/Navigation.tsx → packages/ui/src/lib/utils.ts
 - `Sidebar()` --calls--> `cn()`  [INFERRED]
   apps/docs/src/app/(docs)/components/Sidebar/Sidebar.tsx → packages/ui/src/lib/utils.ts
+- `Layout()` --calls--> `cn()`  [INFERRED]
+  apps/docs/src/app/(docs)/layout.tsx → packages/ui/src/lib/utils.ts
 
 ## Import Cycles
 - 1-file cycle: `apps/desktop/src/renderer/stores/tabs/types.ts -> apps/desktop/src/renderer/stores/tabs/types.ts`
@@ -556,7 +556,7 @@
 - 3-file cycle: `apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/StatusCell/StatusCell.tsx -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/useTasksTable.tsx -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/StatusCell/index.ts -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/StatusCell/StatusCell.tsx`
 - 3-file cycle: `apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/AssigneeCell/AssigneeCell.tsx -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/useTasksTable.tsx -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/AssigneeCell/index.ts -> apps/desktop/src/renderer/routes/_authenticated/_dashboard/tasks/components/TasksView/hooks/useTasksTable/components/AssigneeCell/AssigneeCell.tsx`
 
-## Communities (583 total, 93 thin omitted)
+## Communities (583 total, 99 thin omitted)
 
 ### Community 0 - "Desktop App Dependencies"
 Cohesion: 0.01
@@ -564,7 +564,7 @@ Nodes (149): dependencies, ai, @ai-sdk/react, @ast-grep/napi, better-auth, @bett
 
 ### Community 1 - "UI Accordion & Breadcrumb"
 Cohesion: 0.02
-Nodes (114): useIsMobile(), cn(), AccordionContent(), AccordionItem(), AccordionTrigger(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink() (+106 more)
+Nodes (133): useIsMobile(), cn(), AccordionContent(), AccordionItem(), AccordionTrigger(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink() (+125 more)
 
 ### Community 2 - "Web UI Dependencies"
 Cohesion: 0.01
@@ -576,39 +576,39 @@ Nodes (104): AttachmentsContext, LocalAttachmentsContext, PromptInput(), PromptI
 
 ### Community 4 - "Settings & Onboarding Routes"
 Cohesion: 0.03
-Nodes (64): Route, Route, Route, Route, Route, Route, LegacyPresetsSearch, Route (+56 more)
+Nodes (63): Route, CATEGORY_ORDER, HotkeyRow(), Route, Route, LegacyPresetsSearch, Route, AuthenticatedDashboardLayoutRoute (+55 more)
 
 ### Community 5 - "AI Artifact Display"
 Cohesion: 0.04
-Nodes (47): BashTool(), BashToolProps, BashToolState, ChainOfThought, ChainOfThoughtContent, ChainOfThoughtContentProps, ChainOfThoughtContext, ChainOfThoughtContextValue (+39 more)
+Nodes (60): BashTool(), BashToolProps, BashToolState, ChainOfThought, ChainOfThoughtContent, ChainOfThoughtContentProps, ChainOfThoughtContext, ChainOfThoughtContextValue (+52 more)
 
 ### Community 6 - "MCP Auth & Workspace Creation"
-Cohesion: 0.05
-Nodes (27): Controls(), ControlsProps, Image(), ImageProps, Panel(), PanelProps, TextSelectionPopover(), TextSelectionPopoverAction (+19 more)
+Cohesion: 0.04
+Nodes (29): Controls(), ControlsProps, Image(), ImageProps, Panel(), PanelProps, TextSelectionPopover(), TextSelectionPopoverAction (+21 more)
 
 ### Community 7 - "Media Controls & Image Loader"
 Cohesion: 0.03
 Nodes (58): dependencies, ai, class-variance-authority, clsx, cmdk, date-fns, embla-carousel-react, @hookform/resolvers (+50 more)
 
 ### Community 8 - "Git Worktree Operations"
-Cohesion: 0.06
-Nodes (74): CreateWorkspaceFromWorktreeParams, getKnownBranchesSafe(), HandleExistingWorktreeParams, handleNewWorktree(), HandleNewWorktreeParams, PrWorkspaceResult, persistRetryBranchUpdate(), resolveRetryTarget() (+66 more)
+Cohesion: 0.08
+Nodes (54): initGitRepo(), SelectWorktree, SimpleGit, branchExistsOnRemote(), BranchExistsResult, categorizeGitError(), checkBranchCheckoutSafety(), checkNeedsRebase() (+46 more)
 
 ### Community 9 - "Port & Resource Metrics"
-Cohesion: 0.09
-Nodes (11): treeKillWithEscalation(), containsPortHint(), DaemonSession, IGNORED_PORTS, PortManager, ScanState, PortInfo, DetectedPort (+3 more)
+Cohesion: 0.08
+Nodes (12): treeKillAsync(), treeKillWithEscalation(), containsPortHint(), DaemonSession, IGNORED_PORTS, PortManager, ScanState, PortInfo (+4 more)
 
 ### Community 10 - "tRPC App Router & Auth"
-Cohesion: 0.06
-Nodes (48): AppRouter, performMailAsk(), NotificationEvent, AuthRouter, createAuthRouter(), createAutoUpdateRouter(), createBrowserRouter(), createBrowserHistoryRouter() (+40 more)
+Cohesion: 0.07
+Nodes (47): AppRouter, NotificationEvent, AuthRouter, createAuthRouter(), createAutoUpdateRouter(), createBrowserRouter(), createBrowserHistoryRouter(), CacheRouter (+39 more)
 
 ### Community 11 - "AI Bash Tool & Chain-of-Thought"
 Cohesion: 0.05
 Nodes (39): DiffLine, extractFilename(), FileDiffTool(), FileDiffToolExpandedContentProps, FileDiffToolProps, FileDiffToolState, OpenInChatGPT(), OpenInChatGPTProps (+31 more)
 
 ### Community 12 - "Alert & Model Selector UI"
-Cohesion: 0.06
-Nodes (31): Conversation(), ConversationContent(), ConversationContentProps, ConversationEmptyState(), ConversationEmptyStateProps, ConversationProps, ConversationScrollButton(), ConversationScrollButtonProps (+23 more)
+Cohesion: 0.05
+Nodes (38): CodeBlock(), CodeBlockContext, CodeBlockContextType, CodeBlockCopyButton(), CodeBlockCopyButtonProps, CodeBlockProps, lineNumberTransformer, Conversation() (+30 more)
 
 ### Community 13 - "UI Package Dependencies"
 Cohesion: 0.06
@@ -619,12 +619,12 @@ Cohesion: 0.06
 Nodes (41): Artifact(), ArtifactAction(), ArtifactActionProps, ArtifactActions(), ArtifactActionsProps, ArtifactClose(), ArtifactCloseProps, ArtifactContent() (+33 more)
 
 ### Community 15 - "AI Message Display"
-Cohesion: 0.05
-Nodes (45): CarouselApiContext, InlineCitation(), InlineCitationCardBody(), InlineCitationCardBodyProps, InlineCitationCardProps, InlineCitationCardTrigger(), InlineCitationCardTriggerProps, InlineCitationCarousel() (+37 more)
+Cohesion: 0.06
+Nodes (41): CarouselApiContext, InlineCitation(), InlineCitationCardBody(), InlineCitationCardBodyProps, InlineCitationCardProps, InlineCitationCardTrigger(), InlineCitationCardTriggerProps, InlineCitationCarousel() (+33 more)
 
 ### Community 16 - "Workspace Create/Delete Tools"
-Cohesion: 0.12
-Nodes (22): getAppContext, schema, getWorkspaceDetails, schema, tools, toolsByName, listProjects, schema (+14 more)
+Cohesion: 0.07
+Nodes (38): AgentHooks(), CreatedWorkspace, createWorkspace, execute(), schema, workspaceInputSchema, DeletedWorkspace, deleteWorkspace (+30 more)
 
 ### Community 17 - "AI Inline Citation Carousel"
 Cohesion: 0.06
@@ -639,8 +639,8 @@ Cohesion: 0.04
 Nodes (48): default, dependencies, better-sqlite3, default-shell, drizzle-orm, node-pty, pidtree, pidusage (+40 more)
 
 ### Community 20 - "Terminal Host Client"
-Cohesion: 0.11
-Nodes (4): socketMayExist(), TerminalHostClient, EmptyResponse, ShutdownRequest
+Cohesion: 0.10
+Nodes (5): socketMayExist(), TerminalHostClient, EmptyResponse, ShutdownRequest, WriteRequest
 
 ### Community 21 - "AI Code Block & Confirmation"
 Cohesion: 0.05
@@ -655,20 +655,20 @@ Cohesion: 0.05
 Nodes (42): default, types, dependencies, better-auth, @better-auth/expo, @better-auth/oauth-provider, @better-auth/stripe, dotenv (+34 more)
 
 ### Community 24 - "Git Staging Commands"
-Cohesion: 0.18
-Nodes (30): getStagedNewFilePaths(), getUntrackedFilePaths(), getGitWithShellPath(), gitCheckoutFile(), gitDiscardAllStaged(), gitDiscardAllUnstaged(), gitStageAll(), gitStageFile() (+22 more)
+Cohesion: 0.15
+Nodes (33): getStagedNewFilePaths(), getUntrackedFilePaths(), getGitWithShellPath(), gitCheckoutFile(), gitDiscardAllStaged(), gitDiscardAllUnstaged(), gitStageAll(), gitStageFile() (+25 more)
 
 ### Community 25 - "Hotkeys & Key Mapping"
 Cohesion: 0.09
-Nodes (34): captureHotkeyFromEvent(), buildHotkeysStateFromExport(), buildOverridesFromBindings(), canonicalizeHotkey(), canonicalizeHotkeyForPlatform(), defineHotkey(), deriveNonMacDefault(), ELECTRON_KEY_MAP (+26 more)
+Nodes (19): buildHotkeysStateFromExport(), buildOverridesFromBindings(), ELECTRON_KEY_MAP, HotkeyCategory, HotkeyDefinition, HotkeyId, HotkeyPlatform, HotkeysExportFile (+11 more)
 
 ### Community 26 - "AI Flow Node UI"
-Cohesion: 0.13
-Nodes (20): AgentRuntime, askAgent(), AskAgentParams, buildOneShotCommand(), getAgentMailDir(), MailParty, MailRecipient, OneShotCommand (+12 more)
+Cohesion: 0.18
+Nodes (17): getAgentCodexHome(), askAgent(), AskAgentParams, buildOneShotCommand(), getAgentMailDir(), MailParty, MailRecipient, OneShotCommand (+9 more)
 
 ### Community 27 - "PTY Subprocess Session"
-Cohesion: 0.07
-Nodes (10): treeKillAsync(), PtySubprocessIpcType, AttachedClient, Session, SessionOptions, SpawnProcess, SessionMeta, TerminalDataEvent (+2 more)
+Cohesion: 0.08
+Nodes (5): PtySubprocessIpcType, Session, TerminalDataEvent, TerminalErrorEvent, TerminalExitEvent
 
 ### Community 28 - "AI Queue Display"
 Cohesion: 0.06
@@ -684,11 +684,11 @@ Nodes (40): dependencies, class-variance-authority, dotenv, framer-motion, fumad
 
 ### Community 31 - "Daemon Terminal Manager"
 Cohesion: 0.09
-Nodes (6): DaemonTerminalManager, disposeTerminalHostClient(), getTerminalManagerHooks(), CreateSessionParams, InternalCreateSessionParams, SessionResult
+Nodes (7): DaemonTerminalManager, resetTerminalStateDev(), TERMINAL_STATE_PATHS, disposeTerminalHostClient(), getTerminalManagerHooks(), CreateSessionParams, SessionResult
 
 ### Community 32 - "Terminal Host Session Mgmt"
 Cohesion: 0.09
-Nodes (19): createSession(), promiseWithTimeout(), Semaphore, TerminalHost, ClearScrollbackRequest, CreateOrAttachRequest, CreateOrAttachResponse, DetachRequest (+11 more)
+Nodes (18): createSession(), promiseWithTimeout(), Semaphore, TerminalHost, ClearScrollbackRequest, CreateOrAttachRequest, CreateOrAttachResponse, DetachRequest (+10 more)
 
 ### Community 33 - "Desktop-MCP Browser Action Schemas"
 Cohesion: 0.08
@@ -699,8 +699,8 @@ Cohesion: 0.09
 Nodes (24): BreakdownResult, FunnelStepData, LeaderboardEntry, executeFunnelQuery(), executeHogQLQuery(), executeQuery(), executeRetentionQuery(), FunnelResult (+16 more)
 
 ### Community 35 - "Server tRPC Router Registration"
-Cohesion: 0.07
-Nodes (26): AppRouter, performMailAsk(), NotificationEvent, changesRouter, claudeSessionsRouter, configRouter, ensureConfigExists(), getConfigPath() (+18 more)
+Cohesion: 0.11
+Nodes (16): AppRouter, NotificationEvent, changesRouter, claudeSessionsRouter, configRouter, ensureConfigExists(), getConfigPath(), DirectoryEntry (+8 more)
 
 ### Community 36 - "Monorepo Tooling Dependencies"
 Cohesion: 0.05
@@ -715,8 +715,8 @@ Cohesion: 0.05
 Nodes (36): default, types, default, types, default, types, default, types (+28 more)
 
 ### Community 39 - "TabsContent/Terminal (36 nodes)"
-Cohesion: 0.12
-Nodes (16): ClickToMoveOptions, createTerminalInstance(), CreateTerminalOptions, getPreferredRenderer(), KeyboardHandlerOptions, loadRenderer(), PasteHandlerOptions, PreferredRenderer (+8 more)
+Cohesion: 0.08
+Nodes (27): attachInFlightByPane, attachWaitersByPane, RegisterCallback, UnregisterCallback, UseTerminalLifecycleReturn, sanitizeForTitle(), ClickToMoveOptions, createTerminalInstance() (+19 more)
 
 ### Community 40 - "src/schema (36 nodes)"
 Cohesion: 0.06
@@ -724,15 +724,15 @@ Nodes (35): InsertProject, InsertTask, InsertWorkspace, integrationProvider, pro
 
 ### Community 41 - "Shared Zod Schemas"
 Cohesion: 0.09
-Nodes (28): agentRuntimeSchema, BRANCH_PREFIX_MODES, checkItemSchema, EXECUTION_MODES, FILE_OPEN_MODES, gitHubStatusSchema, GitStatus, gitStatusSchema (+20 more)
+Nodes (29): agentRuntimeSchema, BRANCH_PREFIX_MODES, CheckItem, checkItemSchema, EXECUTION_MODES, FILE_OPEN_MODES, gitHubStatusSchema, GitStatus (+21 more)
 
 ### Community 42 - "src/terminal-host (35 nodes)"
 Cohesion: 0.10
 Nodes (28): clientsById, ClientSockets, ClientState, ensureAuthToken(), handleConnection(), handleRequest(), handlers, isSocketLive() (+20 more)
 
 ### Community 43 - "server/src (34 nodes)"
-Cohesion: 0.10
-Nodes (26): t, DEFAULTS, emitter, load(), save(), section(), Store, uiStateRouter (+18 more)
+Cohesion: 0.13
+Nodes (20): DEFAULTS, emitter, load(), save(), section(), Store, uiStateRouter, extractToken() (+12 more)
 
 ### Community 44 - "components/ScriptsEditor (34 nodes)"
 Cohesion: 0.11
@@ -747,12 +747,12 @@ Cohesion: 0.07
 Nodes (29): default, dependencies, drizzle-orm, @linear/sdk, superjson, @superset/auth, @superset/db, @superset/shared (+21 more)
 
 ### Community 47 - "workspaces/utils (33 nodes)"
-Cohesion: 0.10
-Nodes (24): computeRuntimeAvailability(), ConfigRouter, detectSetupDefaults(), ensureConfigExists(), getConfigPath(), getRuntimeAvailability(), hasConfiguredScripts(), check() (+16 more)
+Cohesion: 0.13
+Nodes (17): computeRuntimeAvailability(), ConfigRouter, detectSetupDefaults(), ensureConfigExists(), getConfigPath(), getRuntimeAvailability(), hasConfiguredScripts(), check() (+9 more)
 
 ### Community 48 - "src/agent-setup (32 nodes)"
-Cohesion: 0.05
-Nodes (49): defaultMessageAnimation, Message(), MessageActionProps, MessageActions(), MessageActionsProps, MessageAttachment(), MessageAttachmentProps, MessageAttachments() (+41 more)
+Cohesion: 0.06
+Nodes (36): defaultMessageAnimation, Message(), MessageActionProps, MessageActions(), MessageActionsProps, MessageAttachment(), MessageAttachmentProps, MessageAttachments() (+28 more)
 
 ### Community 49 - "shared/types (32 nodes)"
 Cohesion: 0.08
@@ -783,28 +783,24 @@ Cohesion: 0.07
 Nodes (29): dependencies, better-sqlite3, drizzle-orm, node-pty, @papyrus/server-core, simple-git, superjson, @superset/local-db (+21 more)
 
 ### Community 57 - "src/agent-setup (29 nodes)"
-Cohesion: 0.14
-Nodes (21): BASH_DIR, BIN_DIR, HOOKS_DIR, OPENCODE_CONFIG_DIR, OPENCODE_PLUGIN_DIR, ZSH_DIR, buildPathPrependFunction(), buildShimFunctions() (+13 more)
+Cohesion: 0.05
+Nodes (93): buildCodexWrapperExecLine(), cleanupGlobalOpenCodePlugin(), CODEX_WRAPPER_EXEC_TEMPLATE_PATH, createClaudeSettings(), createClaudeWrapper(), createCodexWrapper(), createOpenCodePlugin(), createOpenCodeWrapper() (+85 more)
 
 ### Community 58 - "workspaces/utils (29 nodes)"
-Cohesion: 0.15
-Nodes (13): createAgentProcedures(), createAgentInput, createCreateProcedures(), createDeleteProcedures(), createGitStatusProcedures(), createInitProcedures(), AgentFileEntry, createQueryProcedures() (+5 more)
+Cohesion: 0.13
+Nodes (14): createAgentProcedures(), createAgentInput, createCreateProcedures(), createDeleteProcedures(), createGitStatusProcedures(), createInitProcedures(), AgentFileEntry, createQueryProcedures() (+6 more)
 
 ### Community 59 - "src/shared (29 nodes)"
 Cohesion: 0.08
 Nodes (25): default, types, default, dependencies, drizzle-orm, @modelcontextprotocol/sdk, @superset/db, @superset/shared (+17 more)
-
-### Community 60 - "utils/github (29 nodes)"
-Cohesion: 0.10
-Nodes (27): fetchCurrentBranch(), getGitWithShellPath(), isUpstreamMissingError(), cache, computeChecksStatus(), execFileAsync, fetchGitHubPRStatus(), findPRByHeadBranch() (+19 more)
 
 ### Community 61 - "packages/email (29 nodes)"
 Cohesion: 0.07
 Nodes (28): dependencies, date-fns, react, react-dom, @react-email/components, @react-email/tailwind, @t3-oss/env-core, tailwindcss (+20 more)
 
 ### Community 62 - "routers/filesystem (29 nodes)"
-Cohesion: 0.07
-Nodes (38): buildSearchIndex(), createFileSearchFuse(), createPathFilterMatcher(), DEFAULT_IGNORE_PATTERNS, escapeRegexCharacter(), execFileAsync, FILE_SEARCH_FUSE_OPTIONS, FileSearchCacheEntry (+30 more)
+Cohesion: 0.11
+Nodes (28): buildSearchIndex(), createFileSearchFuse(), createPathFilterMatcher(), DEFAULT_IGNORE_PATTERNS, escapeRegexCharacter(), execFileAsync, FILE_SEARCH_FUSE_OPTIONS, FileSearchCacheEntry (+20 more)
 
 ### Community 63 - "src/schema (29 nodes)"
 Cohesion: 0.07
@@ -819,12 +815,12 @@ Cohesion: 0.12
 Nodes (12): GET(), GET(), getLLMText(), getPageImage(), source, RootLayout(), NotFound(), RouterContext (+4 more)
 
 ### Community 66 - "WorkspaceSidebar/WorkspaceListItem (28 nodes)"
-Cohesion: 0.11
-Nodes (17): DeleteWorkspaceDialog(), WorkspaceHoverCardContent(), WorkspaceHoverCardContentProps, CollapsedWorkspaceItem(), CollapsedWorkspaceItemProps, WorkspaceAheadBehind(), WorkspaceAheadBehindProps, WorkspaceDiffStats() (+9 more)
+Cohesion: 0.12
+Nodes (16): WorkspaceHoverCardContent(), WorkspaceHoverCardContentProps, CollapsedWorkspaceItem(), CollapsedWorkspaceItemProps, WorkspaceAheadBehind(), WorkspaceAheadBehindProps, WorkspaceDiffStats(), WorkspaceDiffStatsProps (+8 more)
 
 ### Community 67 - "Terminal/hooks (28 nodes)"
-Cohesion: 0.13
-Nodes (23): useFileLinkClick(), UseFileLinkClickOptions, UseFileLinkClickReturn, useTerminalColdRestore(), UseTerminalColdRestoreReturn, useTerminalConnection(), useTerminalCwd(), useTerminalHotkeys() (+15 more)
+Cohesion: 0.12
+Nodes (24): useFileLinkClick(), UseFileLinkClickOptions, UseFileLinkClickReturn, useTerminalColdRestore(), UseTerminalColdRestoreOptions, UseTerminalColdRestoreReturn, useTerminalCwd(), UseTerminalCwdOptions (+16 more)
 
 ### Community 68 - "components/TableOfContents (28 nodes)"
 Cohesion: 0.12
@@ -851,44 +847,44 @@ Cohesion: 0.29
 Nodes (10): DiffCategory, FileVersions, getAgainstBaseVersions(), getCommittedVersions(), getFileVersions(), getStagedVersions(), getUnstagedVersions(), ReadWorkingFileImageResult (+2 more)
 
 ### Community 74 - "terminal/daemon (27 nodes)"
-Cohesion: 0.08
-Nodes (12): mockClient, MockTerminalHostClient, HistoryManager, ColdRestoreInfo, SessionInfo, CLEAR_SCROLLBACK_PATTERN, containsClearScrollbackSequence(), extractContentAfterClear() (+4 more)
+Cohesion: 0.09
+Nodes (9): mockClient, MockTerminalHostClient, HistoryManager, ColdRestoreInfo, SessionInfo, CLEAR_SCROLLBACK_PATTERN, containsClearScrollbackSequence(), extractContentAfterClear() (+1 more)
 
 ### Community 75 - "agent/src (27 nodes)"
-Cohesion: 0.05
-Nodes (42): CodeBlock(), CodeBlockContext, CodeBlockContextType, CodeBlockCopyButton(), CodeBlockCopyButtonProps, CodeBlockProps, lineNumberTransformer, Confirmation() (+34 more)
+Cohesion: 0.10
+Nodes (22): Confirmation(), ConfirmationAccepted(), ConfirmationAcceptedProps, ConfirmationActionProps, ConfirmationActions(), ConfirmationActionsProps, ConfirmationContext, ConfirmationContextValue (+14 more)
 
 ### Community 76 - "server-core/src (27 nodes)"
 Cohesion: 0.09
 Nodes (8): InitJob, WorkspaceInitManager, getStepIndex(), INIT_STEP_MESSAGES, INIT_STEP_ORDER, isStepComplete(), WorkspaceInitProgress, WorkspaceInitStep
 
 ### Community 77 - "src/workspaces (27 nodes)"
-Cohesion: 0.10
-Nodes (20): createWorkspaceFromWorktree(), handleExistingWorktree(), getRetryInitRelations(), ensureMainWorkspace(), SelectWorktree, settings, activateProject(), getBranchWorkspace() (+12 more)
+Cohesion: 0.11
+Nodes (18): createWorkspaceFromWorktree(), handleExistingWorktree(), getRetryInitRelations(), ensureMainWorkspace(), activateProject(), getBranchWorkspace(), getMaxProjectTabOrder(), getMaxWorkspaceTabOrder() (+10 more)
 
 ### Community 78 - "src/terminal-link-parsing (27 nodes)"
 Cohesion: 0.12
 Nodes (24): binaryInsert(), binaryInsertList(), detectLinks(), detectLinkSuffixes(), detectLinksViaSuffix(), detectPathsNoSuffix(), getLinkSuffix(), ILinkPartialRange (+16 more)
 
 ### Community 79 - "components/IntegrationsSettings (26 nodes)"
-Cohesion: 0.09
-Nodes (22): ApiKeysSettingsPage(), Route, ApiKeysSettings(), ApiKeysSettingsProps, BehaviorSettingsProps, GithubInstallation, IntegrationCardProps, IntegrationsSettings() (+14 more)
+Cohesion: 0.08
+Nodes (24): Route, AccountSettings(), AccountSettingsProps, Route, ApiKeysSettings(), ApiKeysSettingsProps, BehaviorSettingsProps, GithubInstallation (+16 more)
 
 ### Community 80 - "lib/notifications (26 nodes)"
 Cohesion: 0.08
 Nodes (24): 10. `packages/db/src/schema/auth.ts`, 11. `packages/shared/src/auth/authorization/authorization.ts`, 12. `packages/shared/src/auth/authorization/authorization.test.ts`, 13. `packages/auth/src/server.ts`, 14. `apps/desktop/src/renderer/routes/_authenticated/providers/CollectionsProvider/collections.ts`, 15. `packages/email/package.json`, 16. `packages/auth/package.json`, 17. `.env` and `.env.example` (+16 more)
 
 ### Community 81 - "_onboarding/new-project (26 nodes)"
-Cohesion: 0.14
-Nodes (12): CloneRepoTab(), CloneRepoTabProps, EmptyRepoTab(), EmptyRepoTabProps, NewProjectMode, OPTIONS, PathSelector(), PathSelectorProps (+4 more)
+Cohesion: 0.13
+Nodes (13): CloneRepoTab(), CloneRepoTabProps, EmptyRepoTab(), EmptyRepoTabProps, NewProjectMode, OPTIONS, Route, PathSelector() (+5 more)
 
 ### Community 82 - "shared/file-utils (26 nodes)"
-Cohesion: 0.11
-Nodes (17): formatRelativeDate(), getStatusColor(), getStatusIndicator(), FileDiffHeader(), FileDiffHeaderProps, FileDiffSection(), FileDiffSectionProps, GENERATED_FILE_PATTERNS (+9 more)
+Cohesion: 0.15
+Nodes (13): formatRelativeDate(), getStatusColor(), getStatusIndicator(), FileDiffHeader(), FileDiffHeaderProps, FileDiffSection(), FileDiffSectionProps, GENERATED_FILE_PATTERNS (+5 more)
 
 ### Community 83 - "tools/get-console-logs (26 nodes)"
-Cohesion: 0.15
-Nodes (21): darkTheme, builtInThemes, getBuiltInTheme(), lightTheme, monokaiTheme, oneDarkTheme, isThemePack(), normalizeThemeId() (+13 more)
+Cohesion: 0.17
+Nodes (15): darkTheme, getBuiltInTheme(), lightTheme, monokaiTheme, oneDarkTheme, profileMap, TERMINAL_PROFILES, TerminalProfile (+7 more)
 
 ### Community 84 - "packages/mcp (26 nodes)"
 Cohesion: 0.09
@@ -899,20 +895,20 @@ Cohesion: 0.09
 Nodes (22): 1. One Branch Workspace Per Project, 2. Main Terminal on Project Open, 3. Terminology: "Close" vs "Delete", 4. Branch Switching UI, 5. Visual Differentiation, 6. Safety Checks for Branch Switching, 7. Terminal Prompt Refresh, AddBranchDialog (New) (+14 more)
 
 ### Community 86 - "react-query/projects (25 nodes)"
-Cohesion: 0.21
-Nodes (12): CategorizedResults, ErrorOutcome, MultiResults, NeedsGitInitOutcome, OpenNewResult, processOpenNewResults(), SuccessOutcome, useOpenFromPath() (+4 more)
+Cohesion: 0.18
+Nodes (13): CategorizedResults, ErrorOutcome, MultiResults, NeedsGitInitOutcome, OpenNewResult, processOpenNewResults(), SuccessOutcome, useOpenFromPath() (+5 more)
 
 ### Community 87 - "stores/hotkeys (25 nodes)"
-Cohesion: 0.18
-Nodes (11): useEffectiveHotkeysMap(), useHotkeyDisplay(), useHotkeysByCategory(), useHotkeysStore, HotkeyTooltipContent(), HotkeyTooltipContentItem, HotkeyTooltipContentProps, CATEGORY_ORDER (+3 more)
+Cohesion: 0.23
+Nodes (11): DEFAULT_STATE, HotkeysStoreState, useEffectiveHotkeysMap(), useHotkeyDisplay(), useHotkeyKeys(), useHotkeysByCategory(), useHotkeysStore, useHotkeyText() (+3 more)
 
 ### Community 88 - "hooks/usePersistentWebview (25 nodes)"
-Cohesion: 0.10
-Nodes (23): BasePaneWindow(), BrowserErrorOverlay(), BrowserErrorOverlayProps, ERROR_LABELS, FRIENDLY_MESSAGES, BrowserOverflowMenu(), BrowserOverflowMenuProps, BrowserPane() (+15 more)
+Cohesion: 0.08
+Nodes (27): BasePaneWindow(), BrowserErrorOverlay(), BrowserErrorOverlayProps, ERROR_LABELS, FRIENDLY_MESSAGES, BrowserPane(), BrowserPaneDesktop(), BrowserPaneWeb() (+19 more)
 
 ### Community 89 - "components/PresetsSection (25 nodes)"
-Cohesion: 0.15
-Nodes (14): CommandsEditor(), CommandsEditorProps, LabelWithTooltip(), LabelWithTooltipProps, PresetEditorSheet(), PresetEditorSheetProps, AutoApplyField, PRESET_TEMPLATES (+6 more)
+Cohesion: 0.16
+Nodes (13): CommandsEditor(), CommandsEditorProps, LabelWithTooltip(), LabelWithTooltipProps, PresetEditorSheet(), PresetEditorSheetProps, AutoApplyField, PRESET_TEMPLATES (+5 more)
 
 ### Community 90 - "trpc/src (25 nodes)"
 Cohesion: 0.09
@@ -920,27 +916,27 @@ Nodes (22): Across Sessions, At-Most-Once Delivery, Backpressure Handling, Cold 
 
 ### Community 91 - "server-core/src (25 nodes)"
 Cohesion: 0.12
-Nodes (33): collectAgentFiles(), collectAgentFiles(), makeScaffoldedAgent(), TEST_HOME, agentsDir(), getAgentCodexHome(), getAgentHome(), getAgentMemoryDir() (+25 more)
+Nodes (31): collectAgentFiles(), collectAgentFiles(), makeScaffoldedAgent(), TEST_HOME, agentsDir(), getAgentHome(), getAgentMemoryDir(), getAgentWorktreePath() (+23 more)
 
 ### Community 92 - "utils/settings-search (24 nodes)"
 Cohesion: 0.09
 Nodes (23): buildSummary(), ExploringGroup(), ExploringGroupItem, ExploringGroupProps, Loader(), LoaderIconProps, LoaderProps, ShimmerLabel() (+15 more)
 
 ### Community 93 - "components/shared (24 nodes)"
-Cohesion: 0.19
-Nodes (11): MenuItemProps, StatusMenuItems(), StatusMenuItemsProps, StatusCell(), StatusCellProps, STATUS_COLORS, StatusIcon(), StatusIconProps (+3 more)
+Cohesion: 0.32
+Nodes (7): MenuItemProps, StatusMenuItems(), StatusMenuItemsProps, STATUS_COLORS, StatusIcon(), StatusIconProps, StatusType
 
 ### Community 94 - "components/ActivityItem (24 nodes)"
 Cohesion: 0.13
-Nodes (11): ActivityItem(), ActivityItemProps, ActivitySection(), ActivitySectionProps, CommentInput(), CommentInputProps, EditableTitle(), EditableTitleProps (+3 more)
+Nodes (12): ActivityItem(), ActivityItemProps, ActivitySection(), ActivitySectionProps, CommentInput(), CommentInputProps, EditableTitle(), EditableTitleProps (+4 more)
 
 ### Community 95 - "stores/markdown-preferences (24 nodes)"
 Cohesion: 0.14
-Nodes (12): MovePaneResult, getStatusTooltip(), StatusIndicator(), StatusIndicatorProps, AddFileViewerPaneOptions, AddTabWithMultiplePanesOptions, ClosedTabEntry, Tab (+4 more)
+Nodes (13): MovePaneResult, getStatusTooltip(), StatusIndicator(), StatusIndicatorProps, AddFileViewerPaneOptions, AddTabOptions, AddTabWithMultiplePanesOptions, ClosedTabEntry (+5 more)
 
 ### Community 96 - "src/terminal (24 nodes)"
-Cohesion: 0.26
-Nodes (7): getDaemonTerminalManager(), reconcileDaemonSessions(), restartDaemon(), ReconcilableManager, reconcileWithTimeout(), settledWithin(), warnings
+Cohesion: 0.24
+Nodes (9): getDaemonTerminalManager(), getTerminalHostClient(), prewarmTerminalRuntime(), reconcileDaemonSessions(), restartDaemon(), ReconcilableManager, reconcileWithTimeout(), settledWithin() (+1 more)
 
 ### Community 97 - "auth/src (24 nodes)"
 Cohesion: 0.14
@@ -951,24 +947,24 @@ Cohesion: 0.13
 Nodes (21): Command, copyToClipboard(), extractEmbeddedPath(), getAppCommand(), getOpenCommand(), getRevealCommand(), looksLikePath(), MACOS_APP_NAMES (+13 more)
 
 ### Community 99 - "src/terminal (23 nodes)"
-Cohesion: 0.11
-Nodes (8): TerminalExitReason, DataBatcher, RegisteredSession, PtyWriteQueue, TerminalDataEvent, TerminalEvent, TerminalExitEvent, TerminalSession
+Cohesion: 0.08
+Nodes (18): getShellArgs(), findBinaryPathsUnix(), findBinaryPathsWindows(), findRealBinary(), TerminalExitReason, DataBatcher, getDefaultShell(), RegisteredSession (+10 more)
 
 ### Community 100 - "components/TasksTopBar (23 nodes)"
 Cohesion: 0.15
-Nodes (10): AllIssuesIcon(), AllIssuesIconProps, AssigneeFilter(), AssigneeFilterProps, BacklogIcon(), BacklogIconProps, ProjectFilter(), ProjectFilterProps (+2 more)
+Nodes (10): ActiveIcon(), ActiveIconProps, AllIssuesIcon(), AllIssuesIconProps, BacklogIcon(), BacklogIconProps, ProjectFilter(), ProjectFilterProps (+2 more)
 
 ### Community 101 - "routers/projects (23 nodes)"
 Cohesion: 0.15
 Nodes (17): APP_NAMES, BUNDLE_ID_CANDIDATES, extractEmbeddedPath(), getAppCommand(), looksLikePath(), PATH_WRAPPERS, resolvePath(), spawnAsync() (+9 more)
 
 ### Community 102 - "webui/src (23 nodes)"
-Cohesion: 0.16
-Nodes (6): apiTrpcClient, authClient, getAuthToken(), mockSession, ensureAuthenticated(), validate()
+Cohesion: 0.14
+Nodes (7): ensureAuthenticated(), validate(), appShim, ipcRendererShim, listeners, webUtilsShim, Window
 
 ### Community 103 - "components/TaskMarkdownRenderer (23 nodes)"
 Cohesion: 0.11
-Nodes (15): CodeBlockView(), LANGUAGES, CommandItem, COMMANDS, SlashCommand, SlashCommandList, SlashCommandListProps, SlashCommandListRef (+7 more)
+Nodes (14): CodeBlockView(), LANGUAGES, CommandItem, COMMANDS, SlashCommand, SlashCommandList, SlashCommandListProps, SlashCommandListRef (+6 more)
 
 ### Community 104 - "apps/docs (23 nodes)"
 Cohesion: 0.09
@@ -979,20 +975,20 @@ Cohesion: 0.15
 Nodes (13): ElectronTRPCProvider(), queryClient, ElectronRouterOutputs, electronTrpc, globalOperationId, sessionIdLink(), electronReactClient, electronTrpcClient (+5 more)
 
 ### Community 106 - "packages/agent (23 nodes)"
-Cohesion: 0.13
-Nodes (11): register(), register(), LEVEL_MAP, LEVEL_NAMES, register(), register(), register(), allTools (+3 more)
+Cohesion: 0.17
+Nodes (8): register(), register(), register(), register(), allTools, register(), ToolContext, register()
 
 ### Community 107 - "WorkspaceSidebar/ProjectSection (23 nodes)"
-Cohesion: 0.19
-Nodes (8): LinkBehaviorSetting(), SessionsSection(), TerminalLinkBehavior, Route, TerminalSettingsPage(), TerminalSettingsSearch, TerminalSettings(), TerminalSettingsProps
+Cohesion: 0.13
+Nodes (14): LinkBehaviorSetting(), SessionsSection(), useCreateTerminalPreset(), useDeleteTerminalPreset(), usePresets(), useReorderTerminalPresets(), useSetPresetAutoApply(), useUpdateTerminalPreset() (+6 more)
 
 ### Community 108 - "shared/src (23 nodes)"
 Cohesion: 0.13
 Nodes (20): AgentBinary, BINARY_INSTALL, BinaryInstallInfo, CheckedBinary, RUNTIME_BINARY, RuntimeAvailability, AGENT_COMMANDS, AGENT_LABELS (+12 more)
 
 ### Community 109 - "src/terminal-host (23 nodes)"
-Cohesion: 0.12
-Nodes (28): carryOverMemory(), ClaudeRepoSessions, ClaudeSessionStats, ClaudeSessionSummary, contentToText(), encodeClaudeProjectDir(), extractStatsFromLines(), findSessionTranscript() (+20 more)
+Cohesion: 0.10
+Nodes (35): AgentActivity, carryOverMemory(), ClaudeRepoSessions, ClaudeSessionStats, ClaudeSessionSummary, contentToText(), encodeClaudeProjectDir(), extractStatsFromLines() (+27 more)
 
 ### Community 110 - "src/terminal (22 nodes)"
 Cohesion: 0.17
@@ -1007,8 +1003,8 @@ Cohesion: 0.17
 Nodes (7): BasePaneWindowProps, PaneHandlers, FileViewerToolbar(), FileViewerToolbarProps, PaneToolbarActionsProps, SplitOrientation, useSplitOrientation()
 
 ### Community 113 - "providers/CollectionsProvider (22 nodes)"
-Cohesion: 0.13
-Nodes (14): ApiKeyDisplay, apiKeyDisplaySchema, collectionsCache, createLocalCollection(), createOrgCollections(), getCollections(), IntegrationConnectionDisplay, organizationsCollection (+6 more)
+Cohesion: 0.16
+Nodes (12): ApiKeyDisplay, apiKeyDisplaySchema, collectionsCache, createLocalCollection(), createOrgCollections(), getCollections(), IntegrationConnectionDisplay, organizationsCollection (+4 more)
 
 ### Community 114 - "components/DatabaseTable (22 nodes)"
 Cohesion: 0.15
@@ -1023,8 +1019,8 @@ Cohesion: 0.17
 Nodes (21): deleteProjectIcon(), saveProjectIconFromDataUrl(), deleteWorkspaceIcon(), ensureIconsDir(), ensureProjectIconsDir(), ensureWorkspaceIconsDir(), getIconPath(), getIconProtocolUrl() (+13 more)
 
 ### Community 117 - "project/$projectId (21 nodes)"
-Cohesion: 0.16
-Nodes (9): Route, ExternalWorktreesBanner(), generateBranchFromTitle(), ProjectPage(), Step, BranchLike, normalizeBranch(), resolveEffectiveWorkspaceBaseBranch() (+1 more)
+Cohesion: 0.12
+Nodes (18): Route, ExternalWorktreesBanner(), generateBranchFromTitle(), ProjectPage(), Step, deduplicateBranchName(), resolveBranchPrefix(), sanitizeAuthorPrefix() (+10 more)
 
 ### Community 118 - "server/scripts (21 nodes)"
 Cohesion: 0.14
@@ -1055,8 +1051,8 @@ Cohesion: 0.29
 Nodes (8): GHRepoListItemSchema, GitHubRepoListItem, listGitHubRepos(), ListGitHubReposResult, execFileAsync, execWithShellEnv(), getProcessEnvWithShellPath(), getShellEnvironment()
 
 ### Community 125 - "components/EditorContextMenu (20 nodes)"
-Cohesion: 0.17
-Nodes (11): DiffViewerContextMenuProps, DiffViewerProps, registerCopyPathLineAction(), EditorActions, EditorContextMenu(), EditorContextMenuProps, PaneActions, useEditorActions() (+3 more)
+Cohesion: 0.11
+Nodes (20): DiffViewer(), DiffViewerContextMenuProps, DiffViewerProps, registerCopyPathLineAction(), EditorActions, EditorContextMenu(), EditorContextMenuProps, PaneActions (+12 more)
 
 ### Community 126 - "PortsList/hooks (20 nodes)"
 Cohesion: 0.25
@@ -1067,8 +1063,8 @@ Cohesion: 0.16
 Nodes (12): PersistedRingtoneState, Ringtone, RingtoneState, ringtoneStorage, useRingtoneStore, useSelectedRingtoneId(), useSetRingtone(), RingtonesSettings() (+4 more)
 
 ### Community 128 - "components/AssigneeProperty (20 nodes)"
-Cohesion: 0.26
-Nodes (7): AssigneeProperty(), AssigneePropertyProps, OpenInWorkspace(), OpenInWorkspaceProps, PropertiesSidebarProps, TaskWithStatus, deriveBranchName()
+Cohesion: 0.13
+Nodes (14): AssigneeProperty(), AssigneePropertyProps, OpenInWorkspace(), OpenInWorkspaceProps, PriorityProperty(), PropertiesSidebar(), PropertiesSidebarProps, StatusCellProps (+6 more)
 
 ### Community 129 - "routers/external (20 nodes)"
 Cohesion: 0.29
@@ -1079,48 +1075,48 @@ Cohesion: 0.11
 Nodes (19): FileViewerPane(), FileViewerPaneProps, UnsavedChangesDialog(), UnsavedChangesDialogProps, getExtension(), getImageMimeType(), hasRenderedPreview(), IMAGE_EXTENSIONS (+11 more)
 
 ### Community 131 - "src/routers (20 nodes)"
-Cohesion: 0.31
-Nodes (9): execFileAsync, getDefaultBranch(), getGitAuthorName(), getGitHubUsername(), hasOriginRemote(), refreshDefaultBranch(), sanitizeAuthorPrefix(), CATEGORY_COLORS (+1 more)
+Cohesion: 0.18
+Nodes (12): execFileAsync, getDefaultBranch(), getGitAuthorName(), getGitHubUsername(), hasOriginRemote(), refreshDefaultBranch(), sanitizeAuthorPrefix(), CATEGORY_COLORS (+4 more)
 
 ### Community 132 - "components/ResourceConsumption (20 nodes)"
-Cohesion: 0.23
-Nodes (5): NavigationControls(), OpenInMenuButton, OpenInMenuButtonProps, OrganizationDropdown(), WindowControls()
+Cohesion: 0.17
+Nodes (7): useOnlineStatus(), NavigationControls(), OpenInMenuButton, OpenInMenuButtonProps, OrganizationDropdown(), TopBar(), WindowControls()
 
 ### Community 133 - "src/terminal-host (20 nodes)"
-Cohesion: 0.08
-Nodes (26): decoder, flush(), flushOutput(), handleDispose(), handleSpawn(), handleWrite(), createFrameHeader(), EMPTY_PAYLOAD (+18 more)
+Cohesion: 0.17
+Nodes (16): decoder, flush(), flushOutput(), handleDispose(), handleSpawn(), handleWrite(), maybePauseStdin(), maybeResumeStdin() (+8 more)
 
 ### Community 134 - "lib/app-state (19 nodes)"
-Cohesion: 0.10
-Nodes (19): AppStateDB, DEVICE_ID_PATH, ensureValidShape(), initAppState(), loadOrCreateDeviceId(), AppState, AppStateSyncEnvelope, defaultAppState (+11 more)
+Cohesion: 0.17
+Nodes (13): AppStateDB, DEVICE_ID_PATH, ensureValidShape(), initAppState(), loadOrCreateDeviceId(), AppState, AppStateSyncEnvelope, defaultAppState (+5 more)
 
 ### Community 135 - "TabsContent/Terminal (19 nodes)"
-Cohesion: 0.10
-Nodes (26): TerminalExitReason, UseTerminalColdRestoreOptions, UseTerminalConnectionOptions, attachInFlightByPane, attachWaitersByPane, RegisterCallback, UnregisterCallback, UseTerminalLifecycleOptions (+18 more)
+Cohesion: 0.15
+Nodes (16): TerminalExitReason, UseTerminalConnectionOptions, UseTerminalLifecycleOptions, TerminalRendererRef, CreateOrAttachCallbacks, CreateOrAttachInput, TerminalClearScrollbackInput, TerminalClearScrollbackMutate (+8 more)
 
 ### Community 136 - "hooks/usePRStatus (19 nodes)"
-Cohesion: 0.15
-Nodes (10): GitHubStatus, useBranchSyncInvalidation(), useGitChangesStatus(), UseGitChangesStatusOptions, usePRStatus(), UsePRStatusOptions, UsePRStatusResult, useWorkspaceRename() (+2 more)
+Cohesion: 0.14
+Nodes (11): ChangesContent(), GitHubStatus, useBranchSyncInvalidation(), useGitChangesStatus(), UseGitChangesStatusOptions, usePRStatus(), UsePRStatusOptions, UsePRStatusResult (+3 more)
 
 ### Community 137 - "hooks/useHybridSearch (19 nodes)"
 Cohesion: 0.17
-Nodes (10): AssigneeCell(), AssigneeCellProps, useCollections(), PriorityCell(), SearchableTask, SearchResult, useHybridSearch(), columnHelper (+2 more)
+Nodes (9): AssigneeCell(), AssigneeCellProps, StatusCell(), SearchableTask, SearchResult, useHybridSearch(), columnHelper, useRowSelectionStore (+1 more)
 
 ### Community 138 - "apps/desktop (19 nodes)"
 Cohesion: 0.11
 Nodes (19): scripts, build, clean, clean:dev, compile:app, copy:native-modules, dev, generate:routes (+11 more)
 
 ### Community 139 - "components/TasksTableView (19 nodes)"
-Cohesion: 0.22
-Nodes (18): writeFileIfChanged(), buildCopilotWrapperExecLine(), COPILOT_HOOK_TEMPLATE_PATH, createCopilotHookScript(), createCopilotWrapper(), getCopilotHookScriptContent(), getCopilotHookScriptPath(), getCopilotHooksJsonContent() (+10 more)
+Cohesion: 0.12
+Nodes (19): ActivityEvent, BoardItem, cache, computeChecksStatus(), fetchTeamGitHubSnapshot(), fetchTeamIssues(), fetchTeamPRs(), formatPRData() (+11 more)
 
 ### Community 140 - "server-core/src (19 nodes)"
 Cohesion: 0.39
 Nodes (4): formatCpu(), formatMemory(), formatReset(), ResourceConsumption()
 
 ### Community 141 - "src/workspace-runtime (19 nodes)"
-Cohesion: 0.28
-Nodes (13): LocalWorkspaceRuntime, DefaultWorkspaceRuntimeRegistry, getWorkspaceRuntimeRegistry(), resetWorkspaceRuntimeRegistry(), TerminalCapabilities, TerminalEventSource, TerminalManagement, TerminalRuntime (+5 more)
+Cohesion: 0.24
+Nodes (14): collectResourceMetrics(), LocalWorkspaceRuntime, DefaultWorkspaceRuntimeRegistry, getWorkspaceRuntimeRegistry(), resetWorkspaceRuntimeRegistry(), TerminalCapabilities, TerminalEventSource, TerminalManagement (+6 more)
 
 ### Community 142 - "router/integration (19 nodes)"
 Cohesion: 0.09
@@ -1131,8 +1127,8 @@ Cohesion: 0.12
 Nodes (7): NativeNotification, NotificationManager, NotificationManagerDeps, MockNotification, TestDeps, TrackedEntry, isPaneVisible()
 
 ### Community 144 - "components/PriorityProperty (19 nodes)"
-Cohesion: 0.14
-Nodes (13): PRIORITY_LABELS, PriorityCellProps, PriorityIcon(), PriorityIconProps, PriorityMenuIconProps, PRIORITY_LABELS, PriorityProperty(), PriorityPropertyProps (+5 more)
+Cohesion: 0.11
+Nodes (18): PRIORITY_LABELS, PriorityCell(), PriorityCellProps, PriorityIcon(), PriorityIconProps, PriorityMenuIcon(), PriorityMenuIconProps, PRIORITY_LABELS (+10 more)
 
 ### Community 145 - "main/lib (18 nodes)"
 Cohesion: 0.10
@@ -1143,12 +1139,12 @@ Cohesion: 0.11
 Nodes (17): aliases, components, hooks, lib, ui, utils, iconLibrary, rsc (+9 more)
 
 ### Community 147 - "main/lib (18 nodes)"
-Cohesion: 0.14
-Nodes (16): autoUpdateEmitter, AutoUpdateStatusEvent, checkForUpdates(), checkForUpdatesInteractive(), emitStatus(), installUpdate(), IS_PRERELEASE, setupAutoUpdater() (+8 more)
+Cohesion: 0.13
+Nodes (17): autoUpdateEmitter, AutoUpdateStatusEvent, checkForUpdates(), checkForUpdatesInteractive(), emitStatus(), installUpdate(), IS_PRERELEASE, setupAutoUpdater() (+9 more)
 
 ### Community 148 - "renderer/stores (18 nodes)"
-Cohesion: 0.10
-Nodes (14): AppearanceSettings(), AppearanceSettingsProps, FontPreview(), FontSettingSection(), FontSettingSectionProps, VARIANT_CONFIG, MarkdownPreferencesState, MarkdownStyle (+6 more)
+Cohesion: 0.22
+Nodes (6): AppearanceSettings(), AppearanceSettingsProps, FontPreview(), FontSettingSection(), FontSettingSectionProps, VARIANT_CONFIG
 
 ### Community 149 - "renderer/stores (18 nodes)"
 Cohesion: 0.29
@@ -1171,16 +1167,16 @@ Cohesion: 0.16
 Nodes (19): ALLOWED_AUDIO_EXTENSIONS, areSamePath(), CUSTOM_RINGTONE_METADATA_PATH, CustomRingtoneInfo, CustomRingtoneMetadata, ensureCustomRingtonesDir(), getCustomRingtoneFilename(), getCustomRingtoneInfo() (+11 more)
 
 ### Community 154 - "components/CategoryHeader (17 nodes)"
-Cohesion: 0.14
-Nodes (10): CategoryHeader(), CategoryHeaderProps, ChangesContent(), CommitSection(), CommitSectionProps, DiffToolbar(), InfiniteScrollView(), InfiniteScrollViewProps (+2 more)
+Cohesion: 0.18
+Nodes (8): CategoryHeader(), CategoryHeaderProps, CommitSection(), CommitSectionProps, InfiniteScrollView(), InfiniteScrollViewProps, useFileMutations(), VirtualizedFileList()
 
 ### Community 155 - "ChangesContent/context (17 nodes)"
-Cohesion: 0.24
-Nodes (10): createFileKey(), ScrollContext, ScrollContextValue, ScrollProvider(), useScrollContext(), DiffToolbarProps, FlatFileEntry, FocusModeInput (+2 more)
+Cohesion: 0.21
+Nodes (11): createFileKey(), ScrollContext, ScrollContextValue, ScrollProvider(), useScrollContext(), DiffToolbar(), DiffToolbarProps, FlatFileEntry (+3 more)
 
 ### Community 156 - "shared/file-hooks (17 nodes)"
-Cohesion: 0.13
-Nodes (13): getDefaultProjectColor(), ALLOWED_URL_PROTOCOLS, FolderOutcome, OpenNewCanceled, OpenNewError, OpenNewMultiResult, OpenNewResult, Project (+5 more)
+Cohesion: 0.08
+Nodes (21): fetchCurrentBranch(), getGitWithShellPath(), isUpstreamMissingError(), getDefaultProjectColor(), ALLOWED_URL_PROTOCOLS, FolderOutcome, OpenNewCanceled, OpenNewError (+13 more)
 
 ### Community 157 - "renderer/lib (17 nodes)"
 Cohesion: 0.18
@@ -1191,8 +1187,8 @@ Cohesion: 0.17
 Nodes (3): FilePathLinkProvider, decodeUrlEncodedPath(), getCurrentOS()
 
 ### Community 160 - "components/SettingsSidebar (17 nodes)"
-Cohesion: 0.15
-Nodes (12): Route, SECTION_ORDER, SettingsLayout(), getMatchCountBySection(), searchSettings(), GENERAL_SECTIONS, GeneralSettings(), GeneralSettingsProps (+4 more)
+Cohesion: 0.16
+Nodes (11): Route, SECTION_ORDER, SettingsLayout(), getMatchCountBySection(), GENERAL_SECTIONS, GeneralSettings(), GeneralSettingsProps, SettingsRoute (+3 more)
 
 ### Community 161 - "components/WorkspacesListView (17 nodes)"
 Cohesion: 0.20
@@ -1203,8 +1199,8 @@ Cohesion: 0.16
 Nodes (15): getDeviceId(), ensureSyncEnvelope(), fileViewerStateSchema, hotkeysStateSchema, MosaicNode, mosaicNodeSchema, paneSchema, stampSyncEnvelopeBare() (+7 more)
 
 ### Community 163 - "theme/utils (16 nodes)"
-Cohesion: 0.24
-Nodes (12): getDefaultTerminalTheme(), applyTheme(), syncThemeToLocalStorage(), getTerminalColors(), applyUIColors(), clearThemeVariables(), UI_COLOR_TO_CSS_VAR, updateThemeClass() (+4 more)
+Cohesion: 0.26
+Nodes (11): applyTheme(), syncThemeToLocalStorage(), getTerminalColors(), applyUIColors(), clearThemeVariables(), UI_COLOR_TO_CSS_VAR, updateThemeClass(), createEditorColors() (+3 more)
 
 ### Community 164 - "auth/roles (16 nodes)"
 Cohesion: 0.25
@@ -1212,11 +1208,11 @@ Nodes (10): canInvite(), canRemoveMember(), getAvailableRoleChanges(), getInvita
 
 ### Community 165 - "changes/utils (16 nodes)"
 Cohesion: 0.26
-Nodes (9): BranchComparison, getBranchComparison(), TrackingStatus, applyNumstatToFiles(), mapGitStatus(), parseDiffNumstat(), parseGitLog(), parseNameStatus() (+1 more)
+Nodes (10): BranchComparison, getBranchComparison(), TrackingStatus, applyNumstatToFiles(), mapGitStatus(), parseDiffNumstat(), parseGitLog(), parseGitStatus() (+2 more)
 
 ### Community 166 - "providers/MonacoProvider (16 nodes)"
-Cohesion: 0.15
-Nodes (12): DiffViewer(), FileViewerContent(), MONACO_EDITOR_OPTIONS, MonacoContext, MonacoContextValue, monacoPromise, MonacoProvider(), MonacoProviderProps (+4 more)
+Cohesion: 0.19
+Nodes (10): FileViewerContent(), MONACO_EDITOR_OPTIONS, MonacoContext, MonacoContextValue, monacoPromise, MonacoProvider(), MonacoProviderProps, registerSaveAction() (+2 more)
 
 ### Community 167 - "src/local-db (16 nodes)"
 Cohesion: 0.15
@@ -1235,24 +1231,24 @@ Cohesion: 0.11
 Nodes (18): 1. Create clones of your codebase, 2. Use different agents for different jobs, 3. Organize your workspace, 4. Enforce type-safety, lint, and coding standards, Code Quality, Coding environment, Handling Conflicts, Hooks (+10 more)
 
 ### Community 171 - "main/lib (15 nodes)"
-Cohesion: 0.26
-Nodes (8): CloseProjectDialog(), CloseProjectDialogProps, ProjectHeaderProps, getGitHubAvatarUrl(), hexToRgba(), isCustomColor(), ProjectThumbnail(), ProjectThumbnailProps
+Cohesion: 0.48
+Nodes (5): getGitHubAvatarUrl(), hexToRgba(), isCustomColor(), ProjectThumbnail(), ProjectThumbnailProps
 
 ### Community 172 - "stores/tabs (15 nodes)"
-Cohesion: 0.16
-Nodes (10): ActiveIcon(), ActiveIconProps, PriorityMenuIcon(), AssigneeMenuItems(), AssigneeMenuItemsProps, MenuItemProps, TaskContextMenu(), TaskContextMenuProps (+2 more)
+Cohesion: 0.11
+Nodes (14): createFrameHeader(), EMPTY_PAYLOAD, PtySubprocessFrame, PtySubprocessFrameDecoder, writeFrame(), AttachedClient, SessionOptions, SpawnProcess (+6 more)
 
 ### Community 173 - "Terminal/hooks (15 nodes)"
-Cohesion: 0.26
-Nodes (10): NewAgentModal(), RepoMode, RUNTIME_CHOICES, AGENT_RUNTIMES, NewWorkspaceModalState, useCloseNewWorkspaceModal(), useNewWorkspaceModalOpen(), useNewWorkspaceModalStore (+2 more)
+Cohesion: 0.19
+Nodes (12): RuntimeAvailabilityHandle, useRuntimeAvailability(), NewAgentModal(), RepoMode, RUNTIME_CHOICES, AGENT_RUNTIMES, NewWorkspaceModalState, useCloseNewWorkspaceModal() (+4 more)
 
 ### Community 174 - "renderer/stores (15 nodes)"
 Cohesion: 0.19
 Nodes (8): AgentFileEntry, AgentFileGroup, AgentFilesView(), GROUP_ORDER, ImportSessionDialog(), ImportSessionDialogProps, PanelTab, TabButton()
 
 ### Community 176 - "TabsContent/GroupStrip (14 nodes)"
-Cohesion: 0.15
-Nodes (12): AddTabButton(), AddTabButtonProps, GroupItem(), GroupItemProps, GroupStrip(), NewTabDropZone(), NewTabDropZoneProps, formatTokens() (+4 more)
+Cohesion: 0.16
+Nodes (11): AddTabButton(), AddTabButtonProps, GroupItem(), GroupItemProps, NewTabDropZone(), NewTabDropZoneProps, formatTokens(), SessionStatsBadge() (+3 more)
 
 ### Community 177 - "packages/agent (14 nodes)"
 Cohesion: 0.19
@@ -1279,20 +1275,20 @@ Cohesion: 0.11
 Nodes (18): aliases, components, hooks, lib, ui, utils, registries, @ai-elements (+10 more)
 
 ### Community 183 - "components/DeleteConfirmDialog (14 nodes)"
-Cohesion: 0.05
-Nodes (39): RenameInput(), RenameInputProps, DeleteConfirmDialog(), DeleteConfirmDialogProps, useFileDrag(), UseFileDragProps, usePathActions(), UsePathActionsProps (+31 more)
+Cohesion: 0.15
+Nodes (12): DEFAULT_IGNORE_PATTERNS, SPECIAL_FOLDERS, FilesView(), NewItemMode, FileTreeToolbar(), FileTreeToolbarProps, useFileTreeActions(), UseFileTreeActionsProps (+4 more)
 
 ### Community 184 - "components/ui (14 nodes)"
 Cohesion: 0.17
 Nodes (5): ConnectionManager, FocusLock, createMcpServer(), server, transport
 
 ### Community 185 - "components/PresetRow (14 nodes)"
-Cohesion: 0.31
-Nodes (5): AgentHooks(), executeTool(), handledCommands, useCommandWatcher(), useDevicePresence()
+Cohesion: 0.22
+Nodes (10): useFileDrag(), UseFileDragProps, usePathActions(), UsePathActionsProps, FileSearchResultItem(), FileSearchResultItemProps, getFolderLabel(), truncatePathStart() (+2 more)
 
 ### Community 186 - "server-core/src (14 nodes)"
-Cohesion: 0.26
-Nodes (11): clearProviderKey(), getProviderKey(), getProviderKeyStatus(), hasProviderKey(), PROVIDER_IDS, ProviderId, readKeyMap(), setProviderKey() (+3 more)
+Cohesion: 0.18
+Nodes (15): performMailAsk(), performMailAsk(), mailRouter, roster(), clearProviderKey(), getProviderKey(), getProviderKeyStatus(), hasProviderKey() (+7 more)
 
 ### Community 187 - "src/terminal-host (14 nodes)"
 Cohesion: 0.18
@@ -1319,16 +1315,12 @@ Cohesion: 0.17
 Nodes (3): steps.sh script, cleanup_stale_electric_replication_sessions(), step_start_electric()
 
 ### Community 193 - "components/TerminalSettings (13 nodes)"
-Cohesion: 0.13
-Nodes (18): AppearanceSettingsPage(), Route, BehaviorSettingsPage(), Route, IntegrationsSettingsPage(), Route, RingtonesSettingsPage(), Route (+10 more)
+Cohesion: 0.10
+Nodes (23): AccountSettingsPage(), ApiKeysSettingsPage(), AppearanceSettingsPage(), Route, BehaviorSettingsPage(), Route, IntegrationsSettingsPage(), Route (+15 more)
 
 ### Community 194 - "components/ResizablePanel (13 nodes)"
-Cohesion: 0.40
-Nodes (4): UseTerminalCwdOptions, UseTerminalCwdReturn, OSC7_PATTERN, parseCwd()
-
-### Community 195 - "components/FileViewerContent (13 nodes)"
-Cohesion: 0.18
-Nodes (10): DiffData, FileViewerContentProps, ImageData, ImageError, ImageResult, RawFileData, RawFileError, RawFileResult (+2 more)
+Cohesion: 0.23
+Nodes (14): captureHotkeyFromEvent(), canonicalizeHotkey(), defineHotkey(), deriveNonMacDefault(), formatHotkeyDisplay(), formatHotkeyString(), hotkeyFromKeyboardEvent(), isOsReservedHotkey() (+6 more)
 
 ### Community 196 - "components/Footer (13 nodes)"
 Cohesion: 0.26
@@ -1343,16 +1335,16 @@ Cohesion: 0.15
 Nodes (12): compilerOptions, lib, module, moduleResolution, noEmit, noUncheckedIndexedAccess, target, types (+4 more)
 
 ### Community 199 - "TabsContent/Terminal (13 nodes)"
-Cohesion: 0.26
-Nodes (10): consumeStickyCtrl(), isCtrlArmed(), listeners, notify(), setCtrlArmed(), subscribeCtrlArmed(), toControlCode(), toggleCtrlArmed() (+2 more)
+Cohesion: 0.13
+Nodes (14): RestoredModeOverlay(), RestoredModeOverlayProps, SessionKilledOverlay(), SessionKilledOverlayProps, consumeStickyCtrl(), isCtrlArmed(), listeners, notify() (+6 more)
 
 ### Community 200 - "lib/terminal (13 nodes)"
-Cohesion: 0.21
-Nodes (12): buildTerminalCommand(), isFreshShell(), launchCommandInPane(), LaunchCommandInPaneOptions, normalizeTerminalCommand(), TerminalCreateOrAttachInput, TerminalWriteInput, writeCommandInPane() (+4 more)
+Cohesion: 0.13
+Nodes (16): buildTerminalCommand(), isFreshShell(), launchCommandInPane(), LaunchCommandInPaneOptions, normalizeTerminalCommand(), TerminalCreateOrAttachInput, TerminalWriteInput, writeCommandInPane() (+8 more)
 
 ### Community 201 - "lib/tray (13 nodes)"
-Cohesion: 0.18
-Nodes (17): resetTerminalStateDev(), TERMINAL_STATE_PATHS, getTerminalHostClient(), tryListExistingDaemonSessions(), buildSessionsSubmenu(), createTrayIcon(), formatSessionLabel(), getTrayIconPath() (+9 more)
+Cohesion: 0.22
+Nodes (15): tryListExistingDaemonSessions(), buildSessionsSubmenu(), createTrayIcon(), disposeTray(), formatSessionLabel(), getTrayIconPath(), getWorkspaceName(), initTray() (+7 more)
 
 ### Community 202 - "src/agent-setup (12 nodes)"
 Cohesion: 0.33
@@ -1363,27 +1355,27 @@ Cohesion: 0.13
 Nodes (14): Button, Components, Creating New Email Templates, Design System, Environment Variables, Image Setup, Images in Email, Next Templates to Create (+6 more)
 
 ### Community 204 - "workspaces/utils (12 nodes)"
-Cohesion: 0.36
-Nodes (9): deduplicateBranchName(), resolveBranchPrefix(), sanitizeAuthorPrefix(), sanitizeBranchName(), sanitizeBranchNameWithMaxLength(), sanitizeSegment(), truncateBranchName(), deriveWorkspaceBranchFromPrompt() (+1 more)
+Cohesion: 0.21
+Nodes (10): getLabelsForPath(), hasStaticPortsConfig(), loadStaticPorts(), PortEntry, PortsConfig, PORTS_FILE, SUPERSET_DIR, TEST_DIR (+2 more)
 
 ### Community 205 - "components/MarkdownRenderer (12 nodes)"
-Cohesion: 0.11
-Nodes (16): CodeBlock(), CodeBlockProps, CodeNode, mermaidPlugins, defaultConfig, MarkdownRenderer(), MarkdownRendererProps, styleConfigs (+8 more)
+Cohesion: 0.08
+Nodes (22): CodeBlock(), CodeBlockProps, CodeNode, mermaidPlugins, defaultConfig, MarkdownPreferencesState, MarkdownStyle, useMarkdownPreferencesStore (+14 more)
 
 ### Community 206 - "apps/desktop (12 nodes)"
 Cohesion: 0.18
 Nodes (10): canaryLinuxIconPath, canaryMacIconPath, canaryWinIconPath, config, config, currentYear, linuxIconPath, macIconPath (+2 more)
 
 ### Community 207 - "ContentView/ModelBar (12 nodes)"
-Cohesion: 0.23
-Nodes (8): ProviderKey, ProviderKeysHandle, useProviderKeys(), MODEL_BAR_MODELS, ModelDescriptor, ProviderKeyDialog(), ProviderKeyDialogMode, ProviderKeyDialogProps
+Cohesion: 0.18
+Nodes (11): ProviderKey, ProviderKeysHandle, useProviderKeys(), ModelBar(), MODEL_BAR_MODELS, ModelDescriptor, ProviderKeyDialog(), ProviderKeyDialogMode (+3 more)
 
 ### Community 208 - "src/utils (12 nodes)"
 Cohesion: 0.20
 Nodes (6): members, db, dbWs, sql, findOrgMembership(), getCurrentTxid()
 
 ### Community 209 - "mcp/connection (12 nodes)"
-Cohesion: 0.31
+Cohesion: 0.28
 Nodes (5): qstash, verifyOrgAdmin(), verifyOrgMembership(), getSlackConnection(), protectedProcedure
 
 ### Community 210 - "src/schema (12 nodes)"
@@ -1391,8 +1383,8 @@ Cohesion: 0.17
 Nodes (11): organizations, users, githubInstallations, githubPullRequests, githubRepositories, InsertGithubInstallation, InsertGithubPullRequest, InsertGithubRepository (+3 more)
 
 ### Community 211 - "stores/tabs (12 nodes)"
-Cohesion: 0.31
-Nodes (8): getPresetLaunchPlan(), PresetLaunchPlan, PresetMode, PresetOpenTarget, AddTabOptions, OpenPresetOptions, PreparedPreset, PresetPaneLaunch
+Cohesion: 0.18
+Nodes (9): SidebarMode, SidebarState, getPresetLaunchPlan(), PresetLaunchPlan, PresetMode, PresetOpenTarget, OpenPresetOptions, PreparedPreset (+1 more)
 
 ### Community 212 - "tooling/typescript (12 nodes)"
 Cohesion: 0.17
@@ -1439,8 +1431,8 @@ Cohesion: 0.14
 Nodes (13): 1. TypeScript First, 2. Use Selectors for Performance, 3. DevTools Integration, 4. Persistence (Optional), 5. Organize Actions, 6. Async Actions, 7. Slice Pattern for Large Stores, Best Practices (+5 more)
 
 ### Community 224 - "components/ui (11 nodes)"
-Cohesion: 0.10
-Nodes (22): Field(), FieldContent(), FieldDescription(), FieldError(), FieldGroup(), FieldLabel(), FieldLegend(), FieldSeparator() (+14 more)
+Cohesion: 0.20
+Nodes (11): FormControl(), FormDescription(), FormFieldContext, FormFieldContextValue, FormItem(), FormItemContext, FormItemContextValue, FormLabel() (+3 more)
 
 ### Community 225 - "components/ui (11 nodes)"
 Cohesion: 0.15
@@ -1455,8 +1447,8 @@ Cohesion: 0.22
 Nodes (6): cdpPort, makeAppSetup(), registerRoute(), WindowId, ignoreConsoleWarnings(), createWindow()
 
 ### Community 228 - "components/DeleteWorkspaceDialog (10 nodes)"
-Cohesion: 0.32
-Nodes (4): DeleteWorkspaceDialogProps, FocusableLike, focusPrimaryDialogAction(), OpenAutoFocusEventLike
+Cohesion: 0.27
+Nodes (5): DeleteWorkspaceDialog(), DeleteWorkspaceDialogProps, FocusableLike, focusPrimaryDialogAction(), OpenAutoFocusEventLike
 
 ### Community 229 - "TabView/DevToolsPane (10 nodes)"
 Cohesion: 0.15
@@ -1471,16 +1463,16 @@ Cohesion: 0.20
 Nodes (4): MemberAddedEmailProps, MemberRemovedEmailProps, SubscriptionCancelledEmailProps, StandardLayout()
 
 ### Community 232 - "Terminal/ScrollToBottomButton (10 nodes)"
-Cohesion: 0.23
-Nodes (14): buildCodexWrapperExecLine(), cleanupGlobalOpenCodePlugin(), CODEX_WRAPPER_EXEC_TEMPLATE_PATH, createClaudeSettings(), createCodexWrapper(), createOpenCodePlugin(), getClaudeSettingsContent(), getClaudeSettingsPath() (+6 more)
+Cohesion: 0.22
+Nodes (8): useReorderProjects(), CloseProjectDialog(), CloseProjectDialogProps, ProjectHeader(), ProjectHeaderProps, ProjectSection(), ProjectSectionProps, Workspace
 
 ### Community 233 - "components/KeywordSearch (10 nodes)"
 Cohesion: 0.14
 Nodes (11): KeywordSearch(), KeywordSearchProps, KeywordSearchResult, KeywordSearchResult, useKeywordSearch(), UseKeywordSearchParams, DEFAULT_MODE_STATE, SearchDialogMode (+3 more)
 
 ### Community 234 - "src/main (10 nodes)"
-Cohesion: 0.31
-Nodes (7): drawBorder(), findContentBounds(), getIconPath(), hashString(), sdfRoundedRect(), setWorkspaceDockIcon(), TAILWIND_500_COLORS
+Cohesion: 0.15
+Nodes (10): drawBorder(), findContentBounds(), getIconPath(), hashString(), sdfRoundedRect(), setWorkspaceDockIcon(), TAILWIND_500_COLORS, focusMainWindow() (+2 more)
 
 ### Community 235 - "src/schema (10 nodes)"
 Cohesion: 0.20
@@ -1503,16 +1495,16 @@ Cohesion: 0.36
 Nodes (8): clampToWorkArea(), getInitialWindowBounds(), InitialWindowBounds, isVisibleOnAnyDisplay(), isValidWindowState(), loadWindowState(), saveWindowState(), WindowState
 
 ### Community 240 - "server-core/src (10 nodes)"
-Cohesion: 0.21
-Nodes (10): escapeFishDoubleQuoted(), getShellArgs(), findBinaryPathsUnix(), findBinaryPathsWindows(), findRealBinary(), getDefaultShell(), createHeadlessTerminal(), createSession() (+2 more)
+Cohesion: 0.23
+Nodes (10): builtInThemes, isThemePack(), normalizeThemeId(), parseThemeConfigFile(), parseThemeEntry(), RESERVED_THEME_IDS, terminalColorsSchema, ThemeConfigParseResult (+2 more)
 
 ### Community 241 - "components/SystemThemeCard (10 nodes)"
 Cohesion: 0.24
 Nodes (4): SystemThemeCard(), SystemThemeCardProps, ThemeCard(), ThemeCardProps
 
 ### Community 242 - "src/terminal (10 nodes)"
-Cohesion: 0.19
-Nodes (11): createNotifyScript(), getNotifyScriptContent(), NOTIFY_SCRIPT_TEMPLATE_PATH, writeFileIfChanged(), DEFAULT_FILE_OPEN_MODE, DEFAULT_TERMINAL_LINK_BEHAVIOR, EXTERNAL_LINKS, workspace (+3 more)
+Cohesion: 0.24
+Nodes (8): RenameInput(), RenameInputProps, EXTENSION_ICONS, FileIconConfig, FILENAME_ICONS, FOLDER_ICONS, getExtension(), getFileIcon()
 
 ### Community 243 - "apps/webui (10 nodes)"
 Cohesion: 0.20
@@ -1523,8 +1515,8 @@ Cohesion: 0.22
 Nodes (8): mockedHomeDir, TEST_BASH_DIR, TEST_BIN_DIR, TEST_HOOKS_DIR, TEST_OPENCODE_CONFIG_DIR, TEST_OPENCODE_PLUGIN_DIR, TEST_ROOT, TEST_ZSH_DIR
 
 ### Community 245 - "components/RestoredModeOverlay (9 nodes)"
-Cohesion: 0.14
-Nodes (16): PRESET_COLUMNS, PresetColumnConfig, PresetColumnKey, TerminalPreset, PendingTerminalSetup, useHasWorkspaceFailed(), useIsWorkspaceInitializing(), useWorkspaceInitProgress() (+8 more)
+Cohesion: 0.10
+Nodes (24): WorkspaceInitEffects(), GroupStrip(), PRESET_HOTKEY_IDS, usePresetHotkeys(), useWorkspaceShortcuts(), useAppHotkey(), PendingTerminalSetup, useHasWorkspaceFailed() (+16 more)
 
 ### Community 246 - "src/shared (9 nodes)"
 Cohesion: 0.18
@@ -1551,8 +1543,8 @@ Cohesion: 0.22
 Nodes (8): compilerOptions, baseUrl, jsx, lib, moduleResolution, exclude, extends, include
 
 ### Community 252 - "renderer/stores (9 nodes)"
-Cohesion: 0.19
-Nodes (8): WorkspaceInitEffects(), useCreateOrAttachWithTheme(), bootstrapOpenWorktree(), BootstrapOpenWorktreeError, BootstrapOpenWorktreeOptions, OpenWorkspaceData, useOpenExternalWorktree(), useOpenWorktree()
+Cohesion: 0.40
+Nodes (4): useCreateOrAttachWithTheme(), useTerminalConnection(), useOpenExternalWorktree(), useOpenWorktree()
 
 ### Community 253 - "desktop/scripts (9 nodes)"
 Cohesion: 0.25
@@ -1587,8 +1579,8 @@ Cohesion: 0.29
 Nodes (9): comparePrioritiesForDropdown(), compareStatusesForDropdown(), compareTasks(), getPriorityOrder(), getStatusTypeDropdownOrder(), getStatusTypeOrder(), PRIORITY_ORDER, STATUS_TYPE_DROPDOWN_ORDER (+1 more)
 
 ### Community 261 - "renderer/stores (9 nodes)"
-Cohesion: 0.09
-Nodes (17): DevToolsPane(), DevToolsPaneProps, RenamePaneActions, RenamePaneState, useRenamePaneStore, TerminalCallbacksState, useTerminalCallbacksStore, cleanLayout() (+9 more)
+Cohesion: 0.25
+Nodes (6): RenamePaneActions, RenamePaneState, useRenamePaneStore, TerminalCallbacksState, useTerminalCallbacksStore, TabPane()
 
 ### Community 262 - "renderer/stores (9 nodes)"
 Cohesion: 0.29
@@ -1614,17 +1606,13 @@ Nodes (8): name, private, scripts, build, dev, typecheck, type, version
 Cohesion: 0.31
 Nodes (5): AutoFocusEventLike, clearPendingDeleteDialogOpen(), PendingDeleteDialogTimerRef, scheduleDeleteDialogOpen(), UseWorkspaceDeleteHandlerResult
 
-### Community 268 - "tabs/utils (8 nodes)"
-Cohesion: 0.36
-Nodes (3): useOnlineStatus(), MobileSidebarDrawer(), TopBar()
-
 ### Community 269 - "src/agent-setup (8 nodes)"
-Cohesion: 0.50
-Nodes (3): SEARCH_DECORATIONS, TerminalSearch(), TerminalSearchProps
+Cohesion: 0.36
+Nodes (7): Avatar(), avatarFallbackVariants, AvatarProps, avatarVariants, Avatar(), AvatarFallback(), AvatarImage()
 
 ### Community 270 - "terminal/daemon (8 nodes)"
-Cohesion: 0.32
-Nodes (11): createClaudeWrapper(), createOpenCodeWrapper(), buildRealBinaryResolver(), buildWrapperScript(), createWrapper(), getMissingBinaryMessage(), getWrapperPath(), createCursorAgentWrapper() (+3 more)
+Cohesion: 0.27
+Nodes (10): branchExistsOnRemote(), execFileAsync, fetchGitHubPRStatus(), findPRByHeadBranch(), getPRByBranchTracking(), getPRForBranch(), getRepoUrl(), parsePRListResponse() (+2 more)
 
 ### Community 271 - "terminal/daemon (8 nodes)"
 Cohesion: 0.18
@@ -1648,7 +1636,7 @@ Nodes (9): Agent Rules, Code Quality, Common Commands, Database Rules, Exception
 
 ### Community 277 - "packages/desktop-mcp (8 nodes)"
 Cohesion: 0.22
-Nodes (6): ContentHeader(), ContentHeaderProps, RuntimeAvailabilityHandle, useRuntimeAvailability(), ModelBar(), SidebarControl()
+Nodes (7): useFileTree(), UseFileTreeProps, UseFileTreeReturn, FileExplorerState, SortBy, SortDirection, useFileExplorerStore
 
 ### Community 278 - "packages/mcp (8 nodes)"
 Cohesion: 0.20
@@ -1687,12 +1675,12 @@ Cohesion: 0.33
 Nodes (6): localDbMock(), mockClassList, mockHead, mockStyleMap, mockTable(), testTmpDir
 
 ### Community 287 - "components/FileTreeToolbar (7 nodes)"
-Cohesion: 0.26
-Nodes (7): ContentView(), ResizablePanel(), ResizablePanelProps, RightSidebar(), useSidebarStore, useBrowserLifecycle(), WorkspaceLayout()
+Cohesion: 0.13
+Nodes (12): ContentHeader(), ContentHeaderProps, ContentView(), ResizablePanel(), ResizablePanelProps, RightSidebar(), SidebarControl(), useSidebarStore (+4 more)
 
 ### Community 288 - "stores/hotkeys (7 nodes)"
-Cohesion: 0.19
-Nodes (8): LinearCTA(), TasksFilterState, useTasksFilterStore, TabValue, TasksTopBar(), TasksView(), TasksViewProps, UseTasksTableParams
+Cohesion: 0.21
+Nodes (8): LinearCTA(), TasksFilterState, useTasksFilterStore, TasksTableView(), TabValue, TasksTopBar(), TasksViewProps, UseTasksTableParams
 
 ### Community 289 - "shared/src (7 nodes)"
 Cohesion: 0.29
@@ -1715,16 +1703,16 @@ Cohesion: 0.38
 Nodes (5): isThemeType(), resolveTerminalThemeType(), mockLocalStorage, mockStorage, ThemeType
 
 ### Community 295 - "src/preload (6 nodes)"
-Cohesion: 0.18
-Nodes (11): CreatedWorkspace, createWorkspace, execute(), schema, workspaceInputSchema, DeletedWorkspace, deleteWorkspace, execute() (+3 more)
+Cohesion: 0.22
+Nodes (6): AgentRef, deriveActivityFeed(), deriveWorkBoard(), MailEvent, sortByUpdatedAtDesc(), TeamGitHubSnapshot
 
 ### Community 296 - "ChangesContent/utils (6 nodes)"
 Cohesion: 0.73
 Nodes (4): FileListViewMode, sortFiles(), sortFilesGroupedOrder(), sortFilesTreeOrder()
 
 ### Community 297 - "Terminal/hooks (6 nodes)"
-Cohesion: 0.50
-Nodes (3): projectsRelations, workspacesRelations, worktreesRelations
+Cohesion: 0.08
+Nodes (30): projectsRelations, workspacesRelations, CreateWorkspaceFromWorktreeParams, getKnownBranchesSafe(), HandleExistingWorktreeParams, handleNewWorktree(), HandleNewWorktreeParams, PrWorkspaceResult (+22 more)
 
 ### Community 298 - "components/LinearImage (6 nodes)"
 Cohesion: 0.53
@@ -1751,8 +1739,8 @@ Cohesion: 0.22
 Nodes (9): 1. Inspect the current changes, 2. Review changes against codebase standards (CRITICAL GATE), 3. Ensure you are on a feature branch, 4. Move ExecPlan to done (if applicable), 5. Stage and commit changes, 6. Push the branch, 7. Create the PR with `gh`, If discrepancies are found: STOP and report (+1 more)
 
 ### Community 305 - "packages/trpc (6 nodes)"
-Cohesion: 0.23
-Nodes (6): useReorderProjects(), ProjectSection(), SidebarDropZone(), SidebarDropZoneProps, WorkspaceSidebar(), WorkspaceSidebarProps
+Cohesion: 0.36
+Nodes (4): SidebarDropZone(), SidebarDropZoneProps, WorkspaceSidebar(), WorkspaceSidebarProps
 
 ### Community 306 - "components/ai-elements (6 nodes)"
 Cohesion: 0.22
@@ -1787,16 +1775,16 @@ Cohesion: 0.22
 Nodes (9): Open decisions, Papyrus TODO, Phase 0 — Fork groundwork & rebrand ([PHASE_0.md](PHASE_0.md)), Phase 1 — papyrus-server (headless core) ([PHASE_1.md](PHASE_1.md)), Phase 2 — apps/webui (browser client) ([PHASE_2.md](PHASE_2.md)), Phase 3 — Remote access + iPhone ([PHASE_3.md](PHASE_3.md)), Phase 4 — Parity & hardening ([PHASE_4.md](PHASE_4.md)), Phase 5 — Optional ([PHASE_5.md](PHASE_5.md)) (+1 more)
 
 ### Community 314 - "routers/ringtone (5 nodes)"
-Cohesion: 0.26
-Nodes (11): getCustomRingtonePath(), areNotificationSoundsMuted(), getSelectedRingtonePath(), playNotificationSound(), playSoundFile(), getSoundPath(), getSoundsDirectory(), getRingtoneSoundPath() (+3 more)
+Cohesion: 0.24
+Nodes (12): getCustomRingtonePath(), areNotificationSoundsMuted(), getSelectedRingtonePath(), playNotificationSound(), playSoundFile(), getSoundPath(), getSoundsDirectory(), getRingtoneSoundPath() (+4 more)
 
 ### Community 315 - "main/lib (5 nodes)"
-Cohesion: 0.25
-Nodes (8): DEFAULT_STATE, getHotkeyConflict(), getHotkeyKeys(), getOverridesForPlatform(), HotkeysStoreState, isAppHotkeyEvent(), createHotkeysExport(), getEffectiveHotkeysMap()
+Cohesion: 0.38
+Nodes (7): getHotkeyConflict(), getOverridesForPlatform(), isAppHotkeyEvent(), canonicalizeHotkeyForPlatform(), createHotkeysExport(), getEffectiveHotkeysMap(), normalizeBindingsWithDefaults()
 
 ### Community 316 - "lib/static-ports (5 nodes)"
-Cohesion: 0.36
-Nodes (6): Bucket, buckets, clientIp(), isLockedOut(), recordAuthResult(), _resetRateLimit()
+Cohesion: 0.17
+Nodes (12): t, Bucket, buckets, clientIp(), isLockedOut(), recordAuthResult(), _resetRateLimit(), RunningServer (+4 more)
 
 ### Community 317 - "src/shared (5 nodes)"
 Cohesion: 0.22
@@ -1815,16 +1803,16 @@ Cohesion: 0.70
 Nodes (3): formatPathWithProject(), normalizeSeparators(), shortenHomePath()
 
 ### Community 321 - "components/HotkeyTooltipContent (5 nodes)"
-Cohesion: 0.31
-Nodes (6): CollectionsProvider(), deleteWithToast(), showTeardownFailedToast(), showTeardownLogs(), stripAnsi(), TeardownLogsDialog()
+Cohesion: 0.14
+Nodes (12): AssigneeFilter(), AssigneeFilterProps, Route, CollectionsContext, CollectionsContextType, CollectionsProvider(), useCollections(), deleteWithToast() (+4 more)
 
 ### Community 322 - "renderer/stores (5 nodes)"
 Cohesion: 0.40
 Nodes (3): InitGitDialog(), GitInitDialogState, useGitInitDialogStore
 
 ### Community 323 - "Community 323"
-Cohesion: 0.29
-Nodes (5): AccountSettingsPage(), Route, AccountSettings(), AccountSettingsProps, ProfileSkeleton()
+Cohesion: 0.22
+Nodes (5): HOME_A, HOME_B, HOMES, MailFields, ROOT
 
 ### Community 324 - "server/scripts (5 nodes)"
 Cohesion: 0.50
@@ -1847,8 +1835,8 @@ Cohesion: 0.25
 Nodes (8): Desktop App (Electron), Desktop Packaging & Updates, File Operations, General Desktop, Terminal Features, tRPC over Electron IPC, UI State Persistence, Workspace/Worktree
 
 ### Community 330 - "Terminal/TerminalSearch (5 nodes)"
-Cohesion: 0.29
-Nodes (7): UseTerminalRestoreOptions, UseTerminalRestoreReturn, UseTerminalStreamOptions, UseTerminalStreamReturn, DEFAULT_TERMINAL_FONT_FAMILY, TERMINAL_OPTIONS, TerminalStreamEvent
+Cohesion: 0.25
+Nodes (7): RegisterCallback, RegisterGetSelectionCallback, RegisterPasteCallback, UnregisterCallback, useTerminalRefs(), UseTerminalRefsOptions, UseTerminalRefsReturn
 
 ### Community 331 - "tooling/typescript (5 nodes)"
 Cohesion: 0.40
@@ -1899,8 +1887,8 @@ Cohesion: 0.83
 Nodes (3): downscaleImageToDataUrl(), loadImage(), readAsDataUrl()
 
 ### Community 349 - "src/names (4 nodes)"
-Cohesion: 0.36
-Nodes (4): PresetRow(), PresetRowProps, PresetsTable(), PresetsTableProps
+Cohesion: 0.21
+Nodes (8): PresetRow(), PresetRowProps, PRESET_COLUMNS, PresetColumnConfig, PresetColumnKey, PresetsTable(), PresetsTableProps, TerminalPreset
 
 ### Community 350 - "icons/preset-icons (4 nodes)"
 Cohesion: 0.25
@@ -1995,12 +1983,12 @@ Cohesion: 0.29
 Nodes (6): Additional Notes, Description, Related Issues, Screenshots (if applicable), Testing, Type of Change
 
 ### Community 480 - "lib/test-server (1 nodes)"
-Cohesion: 0.17
-Nodes (9): UseTerminalHotkeysOptions, UseTerminalHotkeysReturn, HotkeyMenuShortcut(), HotkeyMenuShortcutProps, useHotkeyText(), ScrollToBottomButton(), ScrollToBottomButtonProps, scrollToBottom() (+1 more)
+Cohesion: 0.14
+Nodes (12): useTerminalHotkeys(), UseTerminalHotkeysOptions, UseTerminalHotkeysReturn, ScrollToBottomButton(), ScrollToBottomButtonProps, DEFAULT_TERMINAL_FONT_FAMILY, TERMINAL_OPTIONS, scrollToBottom() (+4 more)
 
 ### Community 482 - "Community 482"
-Cohesion: 0.33
-Nodes (9): createCursorHookScript(), createCursorHooksJson(), CURSOR_HOOK_TEMPLATE_PATH, CursorHookEntry, CursorHooksJson, getCursorGlobalHooksJsonPath(), getCursorHookScriptContent(), getCursorHookScriptPath() (+1 more)
+Cohesion: 0.43
+Nodes (7): deriveAt(), deriveSubject(), Frontmatter, listMailboxFiles(), listMailEvents(), parseFrontmatter(), readMailFile()
 
 ### Community 483 - "Community 483"
 Cohesion: 0.33
@@ -2015,8 +2003,8 @@ Cohesion: 0.29
 Nodes (7): 1. License compliance (ELv2 chain), 2. Rename ADE → Papyrus, 3. Quarantine the Superset cloud leftovers, 4. README rewrite, Checklist, Phase 0 — Fork groundwork & rebrand (~0.5–1 day), Related
 
 ### Community 486 - "Community 486"
-Cohesion: 0.33
-Nodes (6): AppMetrics, collectResourceMetrics(), ProcessMetrics, ResourceMetricsSnapshot, SessionMetrics, WorkspaceMetrics
+Cohesion: 0.40
+Nodes (5): AppMetrics, ProcessMetrics, ResourceMetricsSnapshot, SessionMetrics, WorkspaceMetrics
 
 ### Community 487 - "Community 487"
 Cohesion: 0.33
@@ -2060,7 +2048,7 @@ Nodes (5): General, Getting Help, Git, Terminal, Workspaces
 
 ### Community 497 - "Community 497"
 Cohesion: 0.33
-Nodes (8): isSupersetManagedHookCommand(), createMastraHooksJson(), getMastraGlobalHooksJsonPath(), getMastraHooksJsonContent(), MastraHookDefinition, MastraHookMatcher, MastraHooksJson, quoteShellPath()
+Nodes (4): apiTrpcClient, authClient, getAuthToken(), mockSession
 
 ### Community 498 - "Community 498"
 Cohesion: 0.53
@@ -2083,16 +2071,16 @@ Cohesion: 0.33
 Nodes (5): API, IpcListener, ipcRendererAPI, listenerMap, Window
 
 ### Community 503 - "Community 503"
-Cohesion: 0.28
-Nodes (4): RestoredModeOverlay(), RestoredModeOverlayProps, SessionKilledOverlay(), SessionKilledOverlayProps
+Cohesion: 0.40
+Nodes (4): DEFAULT_THEMES, LightDiffViewer(), LightDiffViewerProps, SHIKI_THEME_MAP
 
 ### Community 504 - "Community 504"
 Cohesion: 0.33
 Nodes (5): compilerOptions, jsx, exclude, extends, include
 
 ### Community 505 - "Community 505"
-Cohesion: 0.33
-Nodes (7): ProjectSectionProps, Workspace, getSpaceTint(), hexToRgb(), lighten(), rgbToHex(), SPACE_BRAND_COLORS
+Cohesion: 0.53
+Nodes (5): getSpaceTint(), hexToRgb(), lighten(), rgbToHex(), SPACE_BRAND_COLORS
 
 ### Community 506 - "Community 506"
 Cohesion: 0.60
@@ -2111,8 +2099,8 @@ Cohesion: 0.40
 Nodes (5): High-risk/Complex PR template, PR Body Templates (scale to size + risk), Small PR template, Standard PR template, When to use which
 
 ### Community 510 - "Community 510"
-Cohesion: 0.25
-Nodes (5): appShim, ipcRendererShim, listeners, webUtilsShim, Window
+Cohesion: 0.33
+Nodes (4): AgentFileEntry, createAgentInput, findSkillFiles(), workspacesRouter
 
 ### Community 511 - "Community 511"
 Cohesion: 0.40
@@ -2151,8 +2139,8 @@ Cohesion: 0.50
 Nodes (3): register(), UpdateInput, updateSchema
 
 ### Community 520 - "Community 520"
-Cohesion: 0.29
-Nodes (5): PRESET_HOTKEY_IDS, usePresetHotkeys(), useWorkspaceShortcuts(), useAppHotkey(), useHotkeyKeys()
+Cohesion: 0.50
+Nodes (3): LEVEL_MAP, LEVEL_NAMES, register()
 
 ### Community 521 - "Community 521"
 Cohesion: 0.50
@@ -2172,7 +2160,7 @@ Nodes (3): Input, Output, Steps
 
 ### Community 527 - "Community 527"
 Cohesion: 0.33
-Nodes (7): createApplicationMenu(), getMenuAccelerator(), getCurrentPlatform(), getDefaultHotkey(), getEffectiveHotkey(), getHotkey(), toElectronAccelerator()
+Nodes (7): getHotkeyKeys(), createApplicationMenu(), getMenuAccelerator(), getCurrentPlatform(), getDefaultHotkey(), getEffectiveHotkey(), getHotkey()
 
 ### Community 528 - "Community 528"
 Cohesion: 0.50
@@ -2194,10 +2182,6 @@ Nodes (3): Issue Triage: Reproduce Bug and Solve When Possible, Security, Steps
 Cohesion: 0.50
 Nodes (3): DirectoryEntry, FileSystemChangeEvent, FileTreeNode
 
-### Community 537 - "Community 537"
-Cohesion: 0.52
-Nodes (6): useCreateTerminalPreset(), useDeleteTerminalPreset(), usePresets(), useReorderTerminalPresets(), useSetPresetAutoApply(), useUpdateTerminalPreset()
-
 ### Community 539 - "Community 539"
 Cohesion: 0.67
 Nodes (3): Authentication & Authorization, Data Handling, Security & Privacy
@@ -2206,45 +2190,37 @@ Nodes (3): Authentication & Authorization, Data Handling, Security & Privacy
 Cohesion: 0.67
 Nodes (3): Database Migrations, Migration Safety, Schema Changes
 
-### Community 574 - "Community 574"
-Cohesion: 0.60
-Nodes (4): getErrorText(), GitCommandException, isPostCheckoutHookFailure(), runWithPostCheckoutHookTolerance()
-
-### Community 576 - "Community 576"
-Cohesion: 0.47
-Nodes (3): useUpdateProject(), ProjectHeader(), useProjectRename()
+### Community 570 - "Community 570"
+Cohesion: 0.40
+Nodes (3): hooks, TerminalFocusState, TerminalManagerHooks
 
 ### Community 577 - "Community 577"
 Cohesion: 0.40
 Nodes (3): KEY_MAP, MODIFIER_KEYS, register()
-
-### Community 578 - "Community 578"
-Cohesion: 0.40
-Nodes (4): profileMap, TERMINAL_PROFILES, TerminalProfile, TerminalColors
 
 ### Community 581 - "Community 581"
 Cohesion: 0.67
 Nodes (3): repository, type, url
 
 ## Knowledge Gaps
-- **3072 isolated node(s):** `session-start.sh script`, `maestro`, `bun`, `common.sh script`, `args.sh script` (+3067 more)
+- **3088 isolated node(s):** `session-start.sh script`, `maestro`, `bun`, `common.sh script`, `args.sh script` (+3083 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **93 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **99 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `UI Accordion & Breadcrumb` to `AI Prompt Input Attachments`, `AI Artifact Display`, `MCP Auth & Workspace Creation`, `stores/tabs (9 nodes)`, `hooks/usePRStatus (19 nodes)`, `AI Bash Tool & Chain-of-Thought`, `Alert & Model Selector UI`, `UI Package Dependencies`, `AI File Diff Tool`, `AI Message Display`, `AI Inline Citation Carousel`, `AI Code Block & Confirmation`, `packages/desktop-mcp (8 nodes)`, `renderer/stores (18 nodes)`, `components/CategoryHeader (17 nodes)`, `components/FileTreeToolbar (7 nodes)`, `Desktop-MCP Browser Action Schemas`, `components/WorkspacesListView (17 nodes)`, `main/lib (15 nodes)`, `components/ScriptsEditor (34 nodes)`, `renderer/stores (15 nodes)`, `src/agent-setup (32 nodes)`, `TabsContent/GroupStrip (14 nodes)`, `packages/trpc (6 nodes)`, `components/SidebarContent (14 nodes)`, `components/PRIcon (6 nodes)`, `components/DeleteConfirmDialog (14 nodes)`, `components/AsciiSpinner (5 nodes)`, `Community 576`, `WorkspaceSidebar/WorkspaceListItem (28 nodes)`, `components/TableOfContents (28 nodes)`, `components/PageClient (28 nodes)`, `agent/src (27 nodes)`, `components/MarkdownRenderer (12 nodes)`, `components/IntegrationsSettings (26 nodes)`, `shared/file-utils (26 nodes)`, `components/ConfigFilePreview (4 nodes)`, `components/Button (11 nodes)`, `utils/settings-search (24 nodes)`, `components/shared (24 nodes)`, `stores/markdown-preferences (24 nodes)`, `lib/test-server (1 nodes)`, `components/ui (11 nodes)`, `components/SupersetLogo (4 nodes)`, `components/Navigation (10 nodes)`, `components/NavigationBar (22 nodes)`, `components/BasePaneWindow (22 nodes)`, `components/SystemThemeCard (10 nodes)`, `components/DatabaseTable (22 nodes)`?**
-  _High betweenness centrality (0.231) - this node is a cross-community bridge._
-- **Why does `AgentRuntime` connect `AI Flow Node UI` to `src/terminal (23 nodes)`, `Shared Zod Schemas`, `src/terminal (22 nodes)`, `ContentView/ModelBar (12 nodes)`, `workspaces/utils (29 nodes)`, `server-core/src (25 nodes)`, `Daemon Terminal Manager`, `src/schema (29 nodes)`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+- **Why does `cn()` connect `UI Accordion & Breadcrumb` to `AI Prompt Input Attachments`, `AI Artifact Display`, `MCP Auth & Workspace Creation`, `stores/tabs (9 nodes)`, `hooks/usePRStatus (19 nodes)`, `AI Bash Tool & Chain-of-Thought`, `Alert & Model Selector UI`, `UI Package Dependencies`, `AI File Diff Tool`, `AI Message Display`, `src/agent-setup (8 nodes)`, `AI Inline Citation Carousel`, `AI Code Block & Confirmation`, `renderer/stores (18 nodes)`, `ChangesContent/context (17 nodes)`, `components/FileTreeToolbar (7 nodes)`, `Desktop-MCP Browser Action Schemas`, `components/WorkspacesListView (17 nodes)`, `main/lib (15 nodes)`, `components/ScriptsEditor (34 nodes)`, `renderer/stores (15 nodes)`, `src/agent-setup (32 nodes)`, `TabsContent/GroupStrip (14 nodes)`, `packages/trpc (6 nodes)`, `components/SidebarContent (14 nodes)`, `components/PRIcon (6 nodes)`, `components/DeleteConfirmDialog (14 nodes)`, `components/PresetRow (14 nodes)`, `components/AsciiSpinner (5 nodes)`, `WorkspaceSidebar/WorkspaceListItem (28 nodes)`, `components/TableOfContents (28 nodes)`, `components/PageClient (28 nodes)`, `agent/src (27 nodes)`, `components/MarkdownRenderer (12 nodes)`, `components/IntegrationsSettings (26 nodes)`, `shared/file-utils (26 nodes)`, `components/ConfigFilePreview (4 nodes)`, `components/Button (11 nodes)`, `utils/settings-search (24 nodes)`, `components/shared (24 nodes)`, `stores/markdown-preferences (24 nodes)`, `lib/test-server (1 nodes)`, `components/ui (11 nodes)`, `components/SupersetLogo (4 nodes)`, `components/Navigation (10 nodes)`, `Terminal/ScrollToBottomButton (10 nodes)`, `components/NavigationBar (22 nodes)`, `components/BasePaneWindow (22 nodes)`, `components/SystemThemeCard (10 nodes)`, `src/terminal (10 nodes)`, `components/DatabaseTable (22 nodes)`?**
+  _High betweenness centrality (0.218) - this node is a cross-community bridge._
+- **Why does `AgentRuntime` connect `ContentView/ModelBar (12 nodes)` to `src/terminal (23 nodes)`, `AI Flow Node UI`, `Shared Zod Schemas`, `src/terminal (22 nodes)`, `components/RestoredModeOverlay (9 nodes)`, `workspaces/utils (29 nodes)`, `server-core/src (25 nodes)`, `Daemon Terminal Manager`, `src/schema (29 nodes)`?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
 - **Why does `BranchPrefixMode` connect `components/ScriptsEditor (34 nodes)` to `Git Worktree Operations`, `Shared Zod Schemas`, `src/schema (29 nodes)`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **Are the 59 inferred relationships involving `cn()` (e.g. with `RenameInput()` and `Button()`) actually correct?**
   _`cn()` has 59 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `maestro`, `bun` to the rest of the system?**
-  _3076 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3092 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Desktop App Dependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.013422818791946308 - nodes in this community are weakly interconnected._
 - **Should `UI Accordion & Breadcrumb` be split into smaller, more focused modules?**
-  _Cohesion score 0.022701290217213784 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02126104577768919 - nodes in this community are weakly interconnected._
