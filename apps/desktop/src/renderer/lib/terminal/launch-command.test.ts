@@ -34,7 +34,10 @@ describe("launchCommandInPane", () => {
 
 	it("settles before writing when a fresh shell was spawned (issue #49)", async () => {
 		const createOrAttach = mock(async () => ({ isNew: true }));
-		const write = mock(async () => ({}));
+		const write = mock(
+			async (_input: { paneId: string; data: string; throwOnError?: boolean }) =>
+				({}),
+		);
 		const order: string[] = [];
 		const delay = mock(async (_ms: number) => {
 			order.push("delay");
