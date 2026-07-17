@@ -22,6 +22,7 @@ import { createResourceMetricsRouter } from "./resource-metrics";
 import { createRingtoneRouter } from "./ringtone";
 import { createSettingsRouter } from "./settings";
 import { createSyncRouter } from "./sync";
+import { createTeamDashboardRouter } from "./team-dashboard";
 import { createTerminalRouter } from "./terminal";
 import { createUiStateRouter } from "./ui-state";
 import { createUsageRouter } from "./usage";
@@ -38,6 +39,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		window: createWindowRouter(getWindow),
 		projects: createProjectsRouter(getWindow),
 		workspaces: createWorkspacesRouter(),
+		teamDashboard: createTeamDashboardRouter(),
 		terminal: createTerminalRouter(),
 		changes: createChangesRouter(),
 		claudeSessions: createClaudeSessionsRouter(),
