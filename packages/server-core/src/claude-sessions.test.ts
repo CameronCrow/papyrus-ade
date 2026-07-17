@@ -323,6 +323,114 @@ describe("readLatestSessionStats", () => {
 	});
 });
 
+describe("readLatestSessionActivity", () => {
+	// Each scenario gets its own cwd/bucket so the newest-file resolution is
+	// deterministic (one transcript per bucket) and independent of the fixtures
+	// above.
+	const minsAgo = (m: number) => new Date(Date.now() - m * 60 * 1000);
+
+	/** Lay one transcript into `cwd`'s bucket and stamp its mtime. */
+	const layTranscript = (cwd: string, sessionId: string, body: string, mtime: Date) => {
+		const bucket = join(
+			mod.getClaudeProjectsRoot(),
+			mod.encodeClaudeProjectDir(cwd),
+		);
+		mkdirSync(bucket, { recursive: true });
+		const file = join(bucket, `${sessionId}.jsonl`);
+		writeFileSync(file, body, "utf8");
+		utimesSync(file, mtime, mtime);
+		return file;
+	};
+
+	const userLine = (content: string) =>
+		JSON.stringify({ type: "user", message: { role: "user", content } });
+	const assistantLine = (text: string) =>
+		JSON.stringify({
+			type: "assistant",
+			message: { role: "assistant", content: [{ type: "text", text }] },
+		});
+
+	it("reports 'working' when the transcript was touched within 15s", async () => {
+		const cwd = join(TEST_HOME, "code", "act-working");
+		const id = "10000000-0000-0000-0000-000000000001";
+		layTranscript(
+			cwd,
+			id,
+			`${userLine("go")}\n${assistantLine("on it")}\n`,
+			new Date(Date.now() - 2 * 1000),
+		);
+		const act = await mod.readLatestSessionActivity(cwd);
+		expect(act.status).toBe("working");
+		expect(act.sessionId).toBe(id);
+		expect(act.lastModified).toBeGreaterThan(0);
+	});
+
+	it("reports 'waiting' in the quiet window when the last turn is the assistant's", async () => {
+		const cwd = join(TEST_HOME, "code", "act-waiting");
+		const id = "20000000-0000-0000-0000-000000000002";
+		layTranscript(
+			cwd,
+			id,
+			`${userLine("question?")}\n${assistantLine("here is your answer")}\n`,
+			minsAgo(10),
+		);
+		const act = await mod.readLatestSessionActivity(cwd);
+		expect(act.status).toBe("waiting");
+		expect(act.sessionId).toBe(id);
+	});
+
+	it("reports 'idle' in the quiet window when the last record is a user turn", async () => {
+		const cwd = join(TEST_HOME, "code", "act-user-idle");
+		const id = "30000000-0000-0000-0000-000000000003";
+		// Assistant turn followed by a trailing user turn (e.g. fresh input the
+		// agent hasn't started on): waiting requires the assistant to be last.
+		layTranscript(
+			cwd,
+			id,
+			`${assistantLine("done")}\n${userLine("now do the next thing")}\n`,
+			minsAgo(10),
+		);
+		const act = await mod.readLatestSessionActivity(cwd);
+		expect(act.status).toBe("idle");
+		expect(act.sessionId).toBe(id);
+	});
+
+	it("reports 'idle' when the newest transcript is older than 30min", async () => {
+		const cwd = join(TEST_HOME, "code", "act-idle-old");
+		const id = "40000000-0000-0000-0000-000000000004";
+		layTranscript(
+			cwd,
+			id,
+			`${userLine("hi")}\n${assistantLine("hello")}\n`,
+			minsAgo(120),
+		);
+		const act = await mod.readLatestSessionActivity(cwd);
+		expect(act.status).toBe("idle");
+		expect(act.sessionId).toBe(id);
+	});
+
+	it("reports 'idle' with null fields when no session ever ran in the worktree", async () => {
+		const act = await mod.readLatestSessionActivity(
+			join(TEST_HOME, "code", "act-never-ran"),
+		);
+		expect(act.status).toBe("idle");
+		expect(act.lastModified).toBeNull();
+		expect(act.sessionId).toBeNull();
+	});
+
+	it("reports 'unknown' for a corrupt transcript in the quiet window", async () => {
+		const cwd = join(TEST_HOME, "code", "act-unknown");
+		const id = "50000000-0000-0000-0000-000000000005";
+		// Windowed mtime forces the content read; unparseable garbage yields no
+		// meaningful record ⇒ indeterminate.
+		layTranscript(cwd, id, "this is not json at all\n{ broken", minsAgo(5));
+		const act = await mod.readLatestSessionActivity(cwd);
+		expect(act.status).toBe("unknown");
+		expect(act.lastModified).toBeNull();
+		expect(act.sessionId).toBeNull();
+	});
+});
+
 describe("importClaudeSession", () => {
 	it("refuses a worktree with no git state", async () => {
 		const bareWorktree = join(TEST_HOME, "bare-worktree");

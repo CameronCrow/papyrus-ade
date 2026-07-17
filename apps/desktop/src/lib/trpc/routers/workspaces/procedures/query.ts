@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { AgentRuntime } from "@superset/local-db";
 import { projects, workspaces, worktrees } from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import {
 	getAgentHome,
 	getAgentMemoryDir,
@@ -210,6 +210,89 @@ export function getWorkspacesInVisualOrder(): string[] {
 	}
 
 	return orderedIds;
+}
+
+/**
+ * One workspace row as getAllGrouped produces it, plus `agentHome`. Consumed by
+ * the teamDashboard router (issue #51). Field set mirrors getAllGrouped's
+ * per-workspace shape exactly.
+ */
+export interface DashboardWorkspaceRow {
+	id: string;
+	projectId: string;
+	worktreeId: string | null;
+	worktreePath: string;
+	type: "worktree" | "branch";
+	branch: string;
+	name: string;
+	tabOrder: number;
+	createdAt: number;
+	updatedAt: number;
+	lastOpenedAt: number;
+	isUnread: boolean;
+	isUnnamed: boolean;
+	iconUrl: string | null;
+	runtime: AgentRuntime | null;
+	role: string | null;
+	/**
+	 * Agent home directory (holds mail/, memory/, worktree/ …), derived from the
+	 * workspace id via server-core's getAgentHome — paths are derived from the
+	 * agent/workspace id, never stored in the DB (see
+	 * packages/server-core/src/agent-home.ts). Nullable for non-agent rows,
+	 * though derivation currently always resolves to a path.
+	 */
+	agentHome: string | null;
+}
+
+/**
+ * Same per-workspace rows as getAllGrouped, filtered to a single project via a
+ * DB where-clause and each augmented with `agentHome`. Sorted by tabOrder.
+ */
+export function getWorkspacesByProjectId(
+	projectId: string,
+): DashboardWorkspaceRow[] {
+	const project = localDb
+		.select()
+		.from(projects)
+		.where(eq(projects.id, projectId))
+		.get();
+
+	const worktreePathMap: WorktreePathMap = new Map(
+		localDb
+			.select()
+			.from(worktrees)
+			.all()
+			.map((wt) => [wt.id, wt.path]),
+	);
+
+	const projectWorkspaces = localDb
+		.select()
+		.from(workspaces)
+		.where(
+			and(eq(workspaces.projectId, projectId), isNull(workspaces.deletingAt)),
+		)
+		.all()
+		.sort((a, b) => a.tabOrder - b.tabOrder);
+
+	return projectWorkspaces.map((workspace) => {
+		let worktreePath = "";
+		if (workspace.type === "worktree" && workspace.worktreeId) {
+			worktreePath = worktreePathMap.get(workspace.worktreeId) ?? "";
+		} else if (workspace.type === "branch") {
+			worktreePath = project?.mainRepoPath ?? "";
+		}
+
+		return {
+			...workspace,
+			type: workspace.type as "worktree" | "branch",
+			worktreePath,
+			isUnread: workspace.isUnread ?? false,
+			isUnnamed: workspace.isUnnamed ?? false,
+			iconUrl: workspace.iconUrl ?? null,
+			role: readAgentRole(worktreePath),
+			agentHome: getAgentHome(workspace.id),
+		};
+	});
 }
 
 export const createQueryProcedures = () => {
