@@ -69,7 +69,7 @@ export function ModelBar() {
 				? agentName
 				: `${agentName} · ${model.label}`
 			: null;
-		spawnAgentSession({
+		void spawnAgentSession({
 			id: workspaceId,
 			name,
 			runtime: model.runtime,

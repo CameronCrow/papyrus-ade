@@ -1,9 +1,11 @@
 import {
 	AGENT_LABELS,
-	AGENT_PRESET_COMMANDS,
+	buildAgentSessionCommands,
+	isClaudeFamilyRuntime,
 } from "@superset/shared/agent-command";
 import type { AgentRuntime, TerminalPreset } from "@superset/local-db";
 import { useCallback } from "react";
+import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsWithPresets } from "./useTabsWithPresets";
 
 /** Minimal shape needed to spawn an agent's runtime CLI session. */
@@ -26,12 +28,45 @@ export interface AgentSessionWorkspace {
  * runtime, we build a synthetic TerminalPreset that launches the runtime's CLI
  * (via AGENT_PRESET_COMMANDS) in the agent's worktree and open it as a new tab.
  * When the agent has no runtime we fall back to a plain shell tab.
+ *
+ * Re-opening an agent that already has a Claude conversation resumes THAT
+ * conversation deterministically (`claude --resume <id>`, newest transcript for
+ * the worktree) instead of typing a bare `claude` that would start a brand-new
+ * session; only a worktree with no prior transcript starts fresh (issue #49).
  */
 export function useAgentSession() {
 	const { openPreset, addTab } = useTabsWithPresets();
+	const utils = electronTrpc.useUtils();
+
+	/**
+	 * Resolve the agent's most recent Claude session id for its worktree, so the
+	 * launch can `--resume` that exact conversation. Returns null when the runtime
+	 * isn't claude-family, there's no worktree, or the worktree has no prior
+	 * Claude transcript — in which case the caller starts a fresh session.
+	 */
+	const resolveResumeSessionId = useCallback(
+		async (
+			runtime: AgentRuntime,
+			worktreePath: string | undefined,
+		): Promise<string | null> => {
+			if (!worktreePath || !isClaudeFamilyRuntime(runtime)) return null;
+			try {
+				// `list` returns sessions newest-first, grouped by repo; the newest
+				// transcript for this worktree is the conversation to resume.
+				const groups = await utils.claudeSessions.list.fetch({
+					repoPath: worktreePath,
+				});
+				return groups[0]?.sessions[0]?.sessionId ?? null;
+			} catch {
+				// Never block (or fail) a launch on session discovery — start fresh.
+				return null;
+			}
+		},
+		[utils],
+	);
 
 	const spawnAgentSession = useCallback(
-		(workspace: AgentSessionWorkspace) => {
+		async (workspace: AgentSessionWorkspace) => {
 			const { id, name, runtime, worktreePath } = workspace;
 			const cwd = worktreePath || undefined;
 
@@ -40,17 +75,19 @@ export function useAgentSession() {
 				return addTab(id, { initialCwd: cwd });
 			}
 
+			const sessionId = await resolveResumeSessionId(runtime, cwd);
+
 			const preset: TerminalPreset = {
 				id: `agent-${runtime}`,
 				name: name?.trim() || AGENT_LABELS[runtime] || runtime,
 				cwd: worktreePath ?? "",
-				commands: AGENT_PRESET_COMMANDS[runtime],
+				commands: buildAgentSessionCommands({ runtime, sessionId }),
 				executionMode: "new-tab",
 			};
 
 			return openPreset(id, preset, { target: "new-tab" });
 		},
-		[openPreset, addTab],
+		[openPreset, addTab, resolveResumeSessionId],
 	);
 
 	return { spawnAgentSession };
