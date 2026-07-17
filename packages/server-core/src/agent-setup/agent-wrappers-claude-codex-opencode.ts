@@ -44,19 +44,32 @@ export function getOpenCodeGlobalPluginPath(): string {
 	return path.join(configHome, "opencode", "plugin", OPENCODE_PLUGIN_FILE);
 }
 
+/**
+ * Wraps the notify script invocation so it is side-effect-only: stdout/stderr
+ * are redirected away from the PTY/transcript, leaving only the out-of-band
+ * HTTP notification. Without this, Claude Code can surface a hook's output
+ * in the terminal/transcript — and for UserPromptSubmit specifically, stdout
+ * gets injected back into the conversation as context — which is exactly the
+ * "dirtied conversation" behavior this hook must avoid. Mirrors the same
+ * `>/dev/null 2>&1` convention already used for this script by the Codex
+ * wrapper (see codex-wrapper-exec.template.sh).
+ */
+function quietNotifyCommand(notifyPath: string): string {
+	return `"${notifyPath}" >/dev/null 2>&1`;
+}
+
 export function getClaudeSettingsContent(notifyPath: string): string {
+	const command = quietNotifyCommand(notifyPath);
 	const settings = {
 		hooks: {
-			UserPromptSubmit: [{ hooks: [{ type: "command", command: notifyPath }] }],
-			Stop: [{ hooks: [{ type: "command", command: notifyPath }] }],
-			PostToolUse: [
-				{ matcher: "*", hooks: [{ type: "command", command: notifyPath }] },
-			],
+			UserPromptSubmit: [{ hooks: [{ type: "command", command }] }],
+			Stop: [{ hooks: [{ type: "command", command }] }],
+			PostToolUse: [{ matcher: "*", hooks: [{ type: "command", command }] }],
 			PostToolUseFailure: [
-				{ matcher: "*", hooks: [{ type: "command", command: notifyPath }] },
+				{ matcher: "*", hooks: [{ type: "command", command }] },
 			],
 			PermissionRequest: [
-				{ matcher: "*", hooks: [{ type: "command", command: notifyPath }] },
+				{ matcher: "*", hooks: [{ type: "command", command }] },
 			],
 		},
 	};
