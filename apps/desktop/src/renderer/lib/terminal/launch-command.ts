@@ -47,7 +47,14 @@ function isFreshShell(result: unknown): boolean {
 }
 
 function normalizeTerminalCommand(command: string): string {
-	return command.endsWith("\n") ? command : `${command}\n`;
+	// A terminal submits a line on carriage return (\r = Enter), not newline.
+	// Writing \n leaves the command staged in the prompt but unexecuted — the
+	// shell only runs it once it sees \r (matches the Enter key, which sends
+	// "\r"; see TerminalKeyBar). Normalize any trailing newline(s) to a single
+	// \r so the launch actually runs (issue #49).
+	return command.endsWith("\r")
+		? command
+		: `${command.replace(/[\r\n]+$/, "")}\r`;
 }
 
 interface WriteCommandInPaneOptions {
