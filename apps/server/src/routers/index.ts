@@ -11,6 +11,7 @@ import { notificationsRouter } from "./notifications";
 import { projectsRouter } from "./projects";
 import { resourceMetricsRouter } from "./resource-metrics";
 import { settingsRouter, syncRouter } from "./stubs";
+import { teamDashboardRouter } from "./team-dashboard";
 import { terminalRouter } from "./terminal";
 import { uiStateRouter } from "./ui-state";
 import { usageRouter } from "./usage";
@@ -27,6 +28,7 @@ export const appRouter = router({
 	settings: settingsRouter,
 	sync: syncRouter,
 	workspaces: workspacesRouter,
+	teamDashboard: teamDashboardRouter,
 	filesystem: filesystemRouter,
 	github: githubRouter,
 	health: healthRouter,

@@ -346,6 +346,75 @@ function extractStatsFromLines(
 	return null;
 }
 
+/** A resolved newest-transcript pointer for a worktree's session bucket. */
+interface LatestSessionFile {
+	/** Absolute path to the newest `.jsonl` transcript. */
+	path: string;
+	/** Its mtime in epoch ms. */
+	mtime: number;
+	/** Its size in bytes. */
+	size: number;
+}
+
+/**
+ * Resolve "the" session for a worktree: the most-recently-modified transcript
+ * in `cwd`'s `~/.claude/projects` bucket. This is the shared newest-JSONL-for-cwd
+ * heuristic used by both the live-stats and agent-activity readers. Returns null
+ * when the worktree has no Claude sessions at all. Never throws — unreadable
+ * buckets and files that vanish between readdir and stat are simply skipped.
+ */
+async function resolveLatestSessionFile(
+	cwd: string,
+): Promise<LatestSessionFile | null> {
+	const dir = join(getClaudeProjectsRoot(), encodeClaudeProjectDir(cwd));
+	const files = await listTranscriptFiles(dir);
+
+	let newest: LatestSessionFile | null = null;
+	for (const file of files) {
+		try {
+			const s = await stat(file);
+			if (!newest || s.mtimeMs > newest.mtime) {
+				newest = { path: file, mtime: s.mtimeMs, size: s.size };
+			}
+		} catch {
+			// vanished between readdir and stat — skip
+		}
+	}
+	return newest;
+}
+
+/**
+ * Read a transcript's tail (or the whole file when it is small) split into
+ * JSONL lines. Shared by the stats and activity readers so the tail-window read
+ * logic lives in one place. `tailOnly` is true when only the tail was read, so
+ * the caller can fall back to a full read if the tail didn't contain what it
+ * needed. May throw if the file is unreadable — callers handle that.
+ */
+async function readTranscriptTail(
+	newest: LatestSessionFile,
+): Promise<{ lines: string[]; tailOnly: boolean }> {
+	const tailOnly = newest.size > STATS_TAIL_BYTES;
+	let raw: string;
+	if (tailOnly) {
+		const fh = await open(newest.path, "r");
+		try {
+			const buf = Buffer.alloc(STATS_TAIL_BYTES);
+			const { bytesRead } = await fh.read(
+				buf,
+				0,
+				STATS_TAIL_BYTES,
+				newest.size - STATS_TAIL_BYTES,
+			);
+			raw = buf.toString("utf8", 0, bytesRead);
+		} finally {
+			await fh.close();
+		}
+	} else {
+		raw = await readFile(newest.path, "utf8");
+	}
+	return { lines: raw.split("\n"), tailOnly };
+}
+
 /**
  * Read live stats for the newest Claude Code session that ran in `cwd`
  * (a Workspace's worktree path). Uses the same newest-JSONL-for-cwd heuristic
@@ -357,48 +426,18 @@ function extractStatsFromLines(
 export async function readLatestSessionStats(
 	cwd: string,
 ): Promise<ClaudeSessionStats | null> {
-	const dir = join(getClaudeProjectsRoot(), encodeClaudeProjectDir(cwd));
-	const files = await listTranscriptFiles(dir);
-
-	let newest: { path: string; mtime: number; size: number } | null = null;
-	for (const file of files) {
-		try {
-			const s = await stat(file);
-			if (!newest || s.mtimeMs > newest.mtime) {
-				newest = { path: file, mtime: s.mtimeMs, size: s.size };
-			}
-		} catch {
-			// vanished between readdir and stat — skip
-		}
-	}
+	const newest = await resolveLatestSessionFile(cwd);
 	if (!newest) return null;
 
-	const tailOnly = newest.size > STATS_TAIL_BYTES;
-	let raw: string;
+	let read: { lines: string[]; tailOnly: boolean };
 	try {
-		if (tailOnly) {
-			const fh = await open(newest.path, "r");
-			try {
-				const buf = Buffer.alloc(STATS_TAIL_BYTES);
-				const { bytesRead } = await fh.read(
-					buf,
-					0,
-					STATS_TAIL_BYTES,
-					newest.size - STATS_TAIL_BYTES,
-				);
-				raw = buf.toString("utf8", 0, bytesRead);
-			} finally {
-				await fh.close();
-			}
-		} else {
-			raw = await readFile(newest.path, "utf8");
-		}
+		read = await readTranscriptTail(newest);
 	} catch {
 		return null;
 	}
 
-	let stats = extractStatsFromLines(raw.split("\n"));
-	if (!stats && tailOnly) {
+	let stats = extractStatsFromLines(read.lines);
+	if (!stats && read.tailOnly) {
 		// No assistant turn in the tail — fall back to the whole transcript.
 		try {
 			stats = extractStatsFromLines(
@@ -416,6 +455,123 @@ export async function readLatestSessionStats(
 		contextTokens: stats.contextTokens,
 		lastModified: newest.mtime,
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Agent activity (issue #51 — Team Dashboard)
+// ---------------------------------------------------------------------------
+
+/**
+ * A best-effort read on what an agent's newest session is doing right now, for
+ * the Team Dashboard. Derived entirely from the transcript's mtime plus the type
+ * of its last meaningful record — Papyrus never owned these sessions, so there
+ * is no live process to ask. Deliberately coarse and never authoritative:
+ *  - `working`  transcript was touched within the last 15s (actively streaming)
+ *  - `waiting`  quiet for 15s–30min and the last turn was the assistant's
+ *               (a finished reply, or a tool_use parked on an approval prompt) —
+ *               i.e. the ball is in the human's court
+ *  - `idle`     quiet for >30min, no session at all, or quiet-but-the-last-turn
+ *               was the human's / a summary (agent has input but hasn't moved)
+ *  - `unknown`  the transcript could not be read or yielded nothing meaningful
+ */
+export type AgentActivity = {
+	status: "working" | "waiting" | "idle" | "unknown";
+	/** Newest transcript's mtime in epoch ms, or null when indeterminate. */
+	lastModified: number | null;
+	/** Newest transcript's session id, or null when indeterminate. */
+	sessionId: string | null;
+};
+
+/** Touched within this window ⇒ the agent is actively working. */
+const AGENT_WORKING_WINDOW_MS = 15 * 1000;
+/** Quiet past this window ⇒ idle regardless of the last turn. */
+const AGENT_WAITING_WINDOW_MS = 30 * 60 * 1000;
+
+/**
+ * Record types that represent an actual turn (vs. header/title/snapshot
+ * plumbing). The last one of these in the transcript decides `waiting` vs
+ * `idle` in the quiet window.
+ */
+const MEANINGFUL_RECORD_TYPES = new Set(["user", "assistant", "summary"]);
+
+/**
+ * Walk JSONL lines backwards for the `type` of the last meaningful record
+ * (user / assistant / summary). Skips blank lines, unparseable lines (a partial
+ * leading line from a tail read, or junk), and non-turn metadata records.
+ * Returns null when no meaningful record is found.
+ */
+function lastMeaningfulRecordType(lines: string[]): string | null {
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const trimmed = lines[i].trim();
+		if (!trimmed) continue;
+		let record: Record<string, unknown>;
+		try {
+			record = JSON.parse(trimmed);
+		} catch {
+			continue;
+		}
+		if (typeof record.type === "string" && MEANINGFUL_RECORD_TYPES.has(record.type)) {
+			return record.type;
+		}
+	}
+	return null;
+}
+
+/**
+ * Best-effort agent-activity read for the newest Claude Code session in `cwd`
+ * (a Workspace's worktree path). Uses the same newest-JSONL-for-cwd resolution
+ * as {@link readLatestSessionStats}. Never throws: any read/parse failure
+ * resolves to `unknown`, and a worktree with no sessions resolves to `idle`.
+ */
+export async function readLatestSessionActivity(
+	cwd: string,
+): Promise<AgentActivity> {
+	const unknown: AgentActivity = {
+		status: "unknown",
+		lastModified: null,
+		sessionId: null,
+	};
+	try {
+		const newest = await resolveLatestSessionFile(cwd);
+		if (!newest) {
+			// No session ever ran here — quiet, not an error.
+			return { status: "idle", lastModified: null, sessionId: null };
+		}
+		const sessionId = basename(newest.path).replace(/\.jsonl$/, "");
+		const age = Date.now() - newest.mtime;
+
+		// Fresh mtime is enough to call it working — no need to read the file.
+		if (age < AGENT_WORKING_WINDOW_MS) {
+			return { status: "working", lastModified: newest.mtime, sessionId };
+		}
+		// Quiet past the waiting window ⇒ idle, again without reading the file.
+		if (age >= AGENT_WAITING_WINDOW_MS) {
+			return { status: "idle", lastModified: newest.mtime, sessionId };
+		}
+
+		// Quiet window (15s–30min): `waiting` only if the last turn was the
+		// assistant's; a trailing human turn or summary means the agent has input
+		// it hasn't acted on yet ⇒ idle.
+		let read = await readTranscriptTail(newest);
+		let lastType = lastMeaningfulRecordType(read.lines);
+		if (lastType == null && read.tailOnly) {
+			// Last record didn't land in the tail window — read the whole file.
+			lastType = lastMeaningfulRecordType(
+				(await readFile(newest.path, "utf8")).split("\n"),
+			);
+		}
+		if (lastType == null) {
+			// Readable but contained no meaningful record — indeterminate.
+			return unknown;
+		}
+		return {
+			status: lastType === "assistant" ? "waiting" : "idle",
+			lastModified: newest.mtime,
+			sessionId,
+		};
+	} catch {
+		return unknown;
+	}
 }
 
 // ---------------------------------------------------------------------------
