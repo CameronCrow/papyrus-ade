@@ -46,6 +46,7 @@ describe("buildAgentSessionCommands", () => {
 			runtime: "glm",
 			sessionId: SESSION_ID,
 		});
+		if (command === undefined) throw new Error("expected a glm command");
 		// Env assignments stay in front; --resume lands right after `claude`,
 		// before the --model flag, so both the resume target and model apply.
 		expect(command).toContain(`claude --resume ${SESSION_ID} --model`);
