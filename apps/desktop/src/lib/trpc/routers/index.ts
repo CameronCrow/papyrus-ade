@@ -10,6 +10,7 @@ import { createClaudeSessionsRouter } from "./claude-sessions";
 import { createConfigRouter } from "./config";
 import { createExternalRouter } from "./external";
 import { createFilesystemRouter } from "./filesystem";
+import { createGithubRouter } from "./github";
 import { createHotkeysRouter } from "./hotkeys";
 import { createMailRouter } from "./mail";
 import { createMenuRouter } from "./menu";
@@ -41,6 +42,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		changes: createChangesRouter(),
 		claudeSessions: createClaudeSessionsRouter(),
 		filesystem: createFilesystemRouter(),
+		github: createGithubRouter(),
 		mail: createMailRouter(),
 		notifications: createNotificationsRouter(),
 		permissions: createPermissionsRouter(),
