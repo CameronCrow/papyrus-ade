@@ -4,6 +4,7 @@ import { claudeSessionsRouter } from "./claude-sessions";
 import { configRouter } from "./config";
 import { externalRouter } from "./external";
 import { filesystemRouter } from "./filesystem";
+import { githubRouter } from "./github";
 import { healthRouter } from "./health";
 import { mailRouter } from "./mail";
 import { notificationsRouter } from "./notifications";
@@ -27,6 +28,7 @@ export const appRouter = router({
 	sync: syncRouter,
 	workspaces: workspacesRouter,
 	filesystem: filesystemRouter,
+	github: githubRouter,
 	health: healthRouter,
 	mail: mailRouter,
 	notifications: notificationsRouter,
