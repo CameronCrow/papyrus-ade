@@ -61,6 +61,7 @@ const {
 	buildWrapperScript,
 	createCodexWrapper,
 	createMastraWrapper,
+	getClaudeSettingsContent,
 	getCursorHooksJsonContent,
 	getCopilotHookScriptPath,
 	getGeminiSettingsJsonContent,
@@ -322,6 +323,33 @@ describe("agent-wrappers copilot", () => {
 			),
 		).toBe(true);
 		expect(JSON.parse(content2)).toEqual(JSON.parse(content));
+	});
+
+	it("wires Claude Code hooks to a quiet notify command (no stdout/stderr leakage)", () => {
+		const notifyPath = path.join(TEST_HOOKS_DIR, "notify.sh");
+		const content = getClaudeSettingsContent(notifyPath);
+		const parsed = JSON.parse(content) as {
+			hooks: Record<string, Array<{ hooks: Array<{ command: string }> }>>;
+		};
+
+		const events = [
+			"UserPromptSubmit",
+			"Stop",
+			"PostToolUse",
+			"PostToolUseFailure",
+			"PermissionRequest",
+		] as const;
+
+		for (const eventName of events) {
+			const entries = parsed.hooks[eventName];
+			expect(Array.isArray(entries)).toBe(true);
+			const command = entries?.[0]?.hooks?.[0]?.command;
+			expect(command).toBe(`"${notifyPath}" >/dev/null 2>&1`);
+			// The command must redirect both stdout and stderr away from the
+			// PTY/transcript so the hook is side-effect-only.
+			expect(command).toContain(">/dev/null");
+			expect(command).toContain("2>&1");
+		}
 	});
 
 	it("replaces stale Mastra hook commands from old superset paths", () => {
