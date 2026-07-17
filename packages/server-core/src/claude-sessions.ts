@@ -30,9 +30,24 @@ import { basename, join } from "node:path";
  * in. That keeps this module unit-testable and shared across both apps.
  */
 
+/**
+ * Resolve the current user's home directory, preferring a `$HOME`/`%USERPROFILE%`
+ * env override over `os.homedir()`. Node's posix `os.homedir()` already honors
+ * `$HOME` when it's set; Bun's does not — it resolves the home dir via the
+ * system passwd DB regardless of the env var — so on macOS under Bun a runtime
+ * `HOME` override (e.g. from a test sandboxing `~/.claude`) is silently
+ * ignored and callers fall through to the real home dir. Checking the env
+ * vars first makes home-dir resolution deterministic and testable across
+ * runtimes, and matches Node's own semantics (`USERPROFILE` is the Windows
+ * equivalent of `HOME`).
+ */
+function resolveHomeDir(): string {
+	return process.env.HOME || process.env.USERPROFILE || homedir();
+}
+
 /** Root of Claude Code's per-project session store. */
 export function getClaudeProjectsRoot(): string {
-	return join(homedir(), ".claude", "projects");
+	return join(resolveHomeDir(), ".claude", "projects");
 }
 
 /**
