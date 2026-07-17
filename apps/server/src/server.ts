@@ -8,6 +8,7 @@ import { extractToken, loadOrMintToken, verifyToken } from "./auth";
 import type { ServerConfig } from "./config";
 import { isLockedOut, recordAuthResult } from "./rate-limit";
 import { appRouter } from "./routers";
+import { performMailAsk } from "./routers/mail";
 import { serveStatic } from "./static";
 import type { ServerContext } from "./trpc";
 
@@ -97,7 +98,9 @@ export function startServer(config: ServerConfig): Promise<RunningServer> {
 			// injected into every terminal session by buildTerminalEnv and equals
 			// DESKTOP_NOTIFICATIONS_PORT), and it re-emits AGENT_LIFECYCLE events
 			// that the notifications tRPC subscription streams to web clients.
-			startHookReceiver()
+			// mailAsk: agents POST /mail/ask here (issue #45) — same receiver the
+			// lifecycle hooks already reach via SUPERSET_PORT.
+			startHookReceiver({ mailAsk: performMailAsk })
 				.then((hookReceiver) => {
 					resolve({
 						server,

@@ -17,7 +17,16 @@
  * lines up — no terminal-env changes required.
  */
 import { EventEmitter } from "node:events";
-import { createServer, type Server } from "node:http";
+import {
+	createServer,
+	type IncomingMessage,
+	type Server,
+} from "node:http";
+import {
+	type AskAgentResult,
+	MailError,
+	verifyMailToken,
+} from "../agent-mail";
 import { NOTIFICATION_EVENTS } from "../constants";
 import { env } from "../env.shared";
 import { HOOK_PROTOCOL_VERSION } from "../terminal/env";
@@ -46,6 +55,100 @@ export interface HookReceiver {
 	port: number;
 	/** Stop the receiver and release the port. */
 	close(): Promise<void>;
+}
+
+/**
+ * Agent-mail ask (issue #45), wired in by the host (apps/server resolves the
+ * roster from its DB and calls askAgent). Input is the raw parsed JSON body;
+ * the handler validates it.
+ */
+export type MailAskHandler = (body: {
+	from: string;
+	to: string;
+	question: string;
+	depth: number;
+}) => Promise<AskAgentResult>;
+
+const MAX_MAIL_BODY_BYTES = 256 * 1024;
+
+function readBody(req: IncomingMessage): Promise<string> {
+	return new Promise((resolve, reject) => {
+		let body = "";
+		req.on("data", (chunk: Buffer) => {
+			body += chunk.toString("utf8");
+			if (body.length > MAX_MAIL_BODY_BYTES) {
+				reject(new Error("Body too large"));
+				req.destroy();
+			}
+		});
+		req.on("end", () => resolve(body));
+		req.on("error", reject);
+	});
+}
+
+/**
+ * POST /mail/ask — the endpoint an agent calls from inside its terminal
+ * session (address = 127.0.0.1:$SUPERSET_PORT, already injected by
+ * buildTerminalEnv). Unlike /hook/complete this spawns work, so it requires
+ * the ~/.papyrus/token bearer (agents can read that file; other local
+ * processes shouldn't).
+ */
+async function handleMailAsk(
+	req: IncomingMessage,
+	mailAsk: MailAskHandler | undefined,
+): Promise<HookResult> {
+	if (!mailAsk) {
+		return { status: 503, body: { error: "Agent mail is not available" } };
+	}
+	const auth = req.headers.authorization;
+	const bearer = auth?.startsWith("Bearer ")
+		? auth.slice("Bearer ".length).trim()
+		: undefined;
+	if (!verifyMailToken(bearer)) {
+		return { status: 401, body: { error: "Unauthorized" } };
+	}
+	let parsed: Record<string, unknown>;
+	try {
+		const raw: unknown = JSON.parse(await readBody(req));
+		// JSON.parse can yield primitives/null — destructuring those throws.
+		if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+			return { status: 400, body: { error: "Expected a JSON object body" } };
+		}
+		parsed = raw as Record<string, unknown>;
+	} catch {
+		return { status: 400, body: { error: "Invalid JSON body" } };
+	}
+	const { from, to, question } = parsed;
+	const depth = parsed.depth ?? 0;
+	if (
+		typeof from !== "string" ||
+		typeof to !== "string" ||
+		typeof question !== "string" ||
+		typeof depth !== "number" ||
+		!Number.isInteger(depth) ||
+		depth < 0
+	) {
+		return {
+			status: 400,
+			body: {
+				error:
+					'Expected {"from": "<your agent id>", "to": "<agent name>", "question": "...", "depth": <int >= 0>}',
+			},
+		};
+	}
+	try {
+		const result = await mailAsk({ from, to, question, depth });
+		return { status: 200, body: { ...result } };
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		// MailError = a refused/failed ask the agent should read; anything else
+		// is a server bug and shouldn't leak internals.
+		if (error instanceof MailError) {
+			return { status: 400, body: { error: message } };
+		}
+		console.error("[mail] ask failed:", error);
+		return { status: 500, body: { error: "Internal error" } };
+	}
 }
 
 interface HookResult {
@@ -131,6 +234,7 @@ export function handleHookComplete(query: URLSearchParams): HookResult {
 export function startHookReceiver(opts?: {
 	port?: number;
 	host?: string;
+	mailAsk?: MailAskHandler;
 }): Promise<HookReceiver> {
 	const port = opts?.port ?? env.DESKTOP_NOTIFICATIONS_PORT;
 	const host = opts?.host ?? "127.0.0.1";
@@ -146,6 +250,18 @@ export function startHookReceiver(opts?: {
 		if (url.pathname === "/hook/complete") {
 			const { status, body } = handleHookComplete(url.searchParams);
 			sendJson(res, status, body);
+			return;
+		}
+
+		if (url.pathname === "/mail/ask" && req.method === "POST") {
+			void handleMailAsk(req, opts?.mailAsk)
+				.then(({ status, body }) => sendJson(res, status, body))
+				.catch((err) => {
+					// Last-resort guard: an escaped throw must not become an
+					// unhandled rejection (process-fatal) + a hung socket.
+					console.error("[mail] ask handler crashed:", err);
+					sendJson(res, 500, { error: "Internal error" });
+				});
 			return;
 		}
 

@@ -13,6 +13,7 @@ import {
 	getAgentMemoryDir,
 	getAgentWorktreePath,
 } from "./agent-home";
+import { getSupersetHomeDir } from "./app-environment";
 
 /**
  * Memory scaffold written on agent creation (Papyrus Phase E, docs/memory.md).
@@ -338,6 +339,65 @@ still points at \`{{agent_home}}\` in its Operating brief, and the reported
 change summary matches what actually changed in AGENT.md/skills/USER.md.
 `;
 
+// Built-in skill (Papyrus issue #45): teaches the agent to ask a sibling a
+// question via agent mail. The endpoint address (SUPERSET_PORT) is already in
+// every session's env; the token is the same single-user bearer the server
+// mints to {{papyrus_home}}/token, which agents can read off disk.
+const ASK_AGENT_SKILL = `---
+name: ask-agent
+description: Ask a sibling Papyrus agent a question by name.
+version: 0.1.0
+platforms: [macos, linux, windows]
+metadata:
+  ade:
+    tags: [Mail, Collaboration]
+---
+
+# Ask Agent
+
+Ask another Papyrus agent a question and get an answer grounded in THAT
+agent's memory and repository. The server spawns the sibling headlessly and
+returns its reply; the exchange is archived under both agents' mail/ dirs.
+Blocks up to ~5 minutes.
+
+## When to Use
+- The answer lives in a sibling's domain and your own memory/repo doesn't
+  have it (e.g. asking the financial-advisor "what's our grocery budget this
+  week?"). Never for things you already know or can read locally.
+
+## Prerequisites
+- A running Papyrus server (your session has the SUPERSET_PORT env var).
+
+## Procedure
+1. Read the bearer token: the single line in {{papyrus_home}}/token.
+2. POST JSON to http://127.0.0.1:$SUPERSET_PORT/mail/ask with header
+   \`Authorization: Bearer <token>\` and body:
+   \`{"from": "<your $SUPERSET_WORKSPACE_ID>", "to": "<sibling's name>",
+   "question": "<the question>", "depth": <your $PAPYRUS_MAIL_DEPTH, or 0 if unset>}\`
+   (Write the body to a temp file with your file tools and
+   \`curl -sS -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d @<file> <url>\`
+   — that sidesteps shell-quoting the question.)
+3. Read the response:
+   - \`{"status":"answered","answer":"...","threadFile":"..."}\` — use the answer.
+   - \`{"status":"timeout","threadFile":"..."}\` — the sibling is still working;
+     its answer will land in {{agent_home}}/mail/inbox/ later. Say so and move on.
+   - \`{"error":"..."}\` — the ask was refused (unknown agent, depth limit, etc.).
+4. Follow-ups are NEW asks: quote the relevant thread file content from
+   {{agent_home}}/mail/sent/ inside your next question so the sibling has the
+   context (each ask is a fresh session for them).
+
+## Pitfalls
+- Always pass your real $PAPYRUS_MAIL_DEPTH (0 when unset). Chains deeper than
+  2 hops are refused by design — if your own depth is already 2, answer from
+  what you have instead of asking further.
+- The call blocks for minutes; don't fan out asks you don't need.
+- "to" is the agent's display name (case-insensitive), not an id.
+
+## Verification
+The response has \`"status": "answered"\` and the exchange file exists under
+{{agent_home}}/mail/sent/.
+`;
+
 const CLAUDE_BRIDGE = `@{{agent_home}}/memory/AGENT.md
 @{{agent_home}}/memory/USER.md
 <!-- MEMORY.md is loaded via Claude Code native auto-memory (autoMemoryDirectory). -->
@@ -373,6 +433,9 @@ let data = {};
 try { data = JSON.parse(raw || "{}"); } catch {}
 // Already inside the reflection turn we injected — let it stop (no loop).
 if (data && data.stop_hook_active) process.exit(0);
+// Agent-mail one-shot answer (PAPYRUS_MAIL_DEPTH set): skip reflection — a
+// blocked stop would replace the printed answer with the reflection turn.
+if (process.env.PAPYRUS_MAIL_DEPTH) process.exit(0);
 const reason = ${JSON.stringify(reason)};
 process.stdout.write(JSON.stringify({ decision: "block", reason }));
 process.exit(0);
@@ -444,6 +507,7 @@ export function scaffoldAgentMemory({
 		agent_name: agentName,
 		agent_id: agentId,
 		agent_home: agentHome,
+		papyrus_home: getSupersetHomeDir(),
 		user_name: resolvedUserName,
 		role_section: roleSection(role, resolvedUserName),
 		runtime,
@@ -467,6 +531,9 @@ export function scaffoldAgentMemory({
 	const adoptPersonaDir = join(skillsDir, "adopt-persona");
 	mkdirSync(adoptPersonaDir, { recursive: true });
 	writeIfEmpty(join(adoptPersonaDir, "SKILL.md"), sub(ADOPT_PERSONA_SKILL, vars));
+	const askAgentDir = join(skillsDir, "ask-agent");
+	mkdirSync(askAgentDir, { recursive: true });
+	writeIfEmpty(join(askAgentDir, "SKILL.md"), sub(ASK_AGENT_SKILL, vars));
 
 	// Per-runtime bridge files in the worktree (point each CLI at canonical
 	// memory). Idempotent so we never clobber a bridge the user customized.
@@ -475,9 +542,15 @@ export function scaffoldAgentMemory({
 	mkdirSync(claudeDir, { recursive: true });
 	// Session-reflection hook script + settings that wire it as a Stop hook and
 	// point native auto-memory at the canonical dir. Both are Claude-Code-only
-	// surfaces; harmless to the other runtimes.
+	// surfaces; harmless to the other runtimes. The hook script is generated
+	// (header says do-not-edit), so it is force-refreshed — that's how behavior
+	// fixes (e.g. the agent-mail guard) reach existing agents.
 	const reflectHookPath = join(claudeDir, "reflect-on-stop.mjs");
-	writeIfEmpty(reflectHookPath, reflectHookScript(agentHome, resolvedUserName));
+	writeFileSync(
+		reflectHookPath,
+		reflectHookScript(agentHome, resolvedUserName),
+		"utf8",
+	);
 	writeIfEmpty(
 		join(claudeDir, "settings.json"),
 		`${JSON.stringify(
@@ -561,14 +634,22 @@ export function scaffoldAgentSkills(
 	agentId: string,
 	agentName: string,
 	userName?: string,
+	/**
+	 * The agent's real worktree. When provided, the generated worktree hook
+	 * script (reflect-on-stop.mjs) is force-refreshed too, so hook behavior
+	 * fixes reach already-scaffolded agents at launch. Skills-only when omitted.
+	 */
+	worktreePath?: string,
 ): void {
 	const agentHome = getAgentHome(agentId);
 	const skillsDir = join(agentHome, "skills");
+	const resolvedUserName = userName?.trim() || "the user";
 	const vars: Record<string, string> = {
 		agent_name: agentName,
 		agent_id: agentId,
 		agent_home: agentHome,
-		user_name: userName?.trim() || "the user",
+		papyrus_home: getSupersetHomeDir(),
+		user_name: resolvedUserName,
 	};
 
 	mkdirSync(skillsDir, { recursive: true });
@@ -577,4 +658,18 @@ export function scaffoldAgentSkills(
 	const adoptPersonaDir = join(skillsDir, "adopt-persona");
 	mkdirSync(adoptPersonaDir, { recursive: true });
 	writeIfEmpty(join(adoptPersonaDir, "SKILL.md"), sub(ADOPT_PERSONA_SKILL, vars));
+	const askAgentDir = join(skillsDir, "ask-agent");
+	mkdirSync(askAgentDir, { recursive: true });
+	writeIfEmpty(join(askAgentDir, "SKILL.md"), sub(ASK_AGENT_SKILL, vars));
+
+	if (worktreePath) {
+		const claudeDir = join(worktreePath, ".claude");
+		if (existsSync(claudeDir)) {
+			writeFileSync(
+				join(claudeDir, "reflect-on-stop.mjs"),
+				reflectHookScript(agentHome, resolvedUserName),
+				"utf8",
+			);
+		}
+	}
 }
