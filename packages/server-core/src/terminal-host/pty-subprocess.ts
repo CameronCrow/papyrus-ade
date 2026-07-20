@@ -12,6 +12,7 @@ import { write as fsWrite } from "node:fs";
 import type { IPty } from "node-pty";
 import * as pty from "node-pty";
 import treeKill from "tree-kill";
+import { createOutputCoalescer } from "./output-coalescer";
 import {
 	PtySubprocessFrameDecoder,
 	PtySubprocessIpcType,
@@ -52,19 +53,34 @@ const INPUT_QUEUE_LOW_WATERMARK_BYTES = 4 * 1024 * 1024; // 4MB
 // Hard cap to avoid runaway memory usage if upstream misbehaves.
 const INPUT_QUEUE_HARD_LIMIT_BYTES = 64 * 1024 * 1024; // 64MB
 
-// Output batching - collect PTY output and send periodically.
-// CRITICAL: Use array buffering to avoid O(n²) string concatenation.
-let outputChunks: string[] = [];
-let outputBytesQueued = 0;
-let outputFlushScheduled = false;
-const OUTPUT_FLUSH_INTERVAL_MS = 32; // ~30 fps max
-const MAX_OUTPUT_BATCH_SIZE_BYTES = 128 * 1024; // 128KB max per flush
+// Output coalescing - the first queued chunk arms a short (2ms) timer;
+// chunks arriving within the window ride the same timer and flush as ONE
+// frame (see output-coalescer.ts). Was a fixed 32ms batch; 2ms keeps Ink
+// repaint bursts atomic while cutting ~30ms of fixed echo latency (#58).
+const OUTPUT_COALESCE_MS = 2;
+const MAX_OUTPUT_BATCH_SIZE_BYTES = 128 * 1024; // 128KB force-flush per batch
 
 // Backpressure - track if stdout is draining
 let stdoutDraining = true;
 let ptyPaused = false;
 
 const DEBUG_OUTPUT_BATCHING = process.env.SUPERSET_PTY_SUBPROCESS_DEBUG === "1";
+
+const outputCoalescer = createOutputCoalescer({
+	coalesceMs: OUTPUT_COALESCE_MS,
+	maxBatchBytes: MAX_OUTPUT_BATCH_SIZE_BYTES,
+	flush: (data, chunkCount) => {
+		const payload = Buffer.from(data, "utf8");
+
+		if (DEBUG_OUTPUT_BATCHING) {
+			console.error(
+				`[pty-subprocess] Flushing ${payload.length} bytes (${chunkCount} chunks batched)`,
+			);
+		}
+
+		send(PtySubprocessIpcType.Data, payload);
+	},
+});
 
 // =============================================================================
 // Helpers
@@ -90,46 +106,6 @@ process.stdout.on("drain", () => {
 
 function sendError(message: string): void {
 	send(PtySubprocessIpcType.Error, Buffer.from(message, "utf8"));
-}
-
-/**
- * Queue PTY output for batched sending.
- * Flushes immediately if batch exceeds MAX_OUTPUT_BATCH_SIZE_BYTES.
- */
-function queueOutput(data: string): void {
-	outputChunks.push(data);
-	outputBytesQueued += Buffer.byteLength(data, "utf8");
-
-	if (outputBytesQueued >= MAX_OUTPUT_BATCH_SIZE_BYTES) {
-		outputFlushScheduled = false;
-		flushOutput();
-		return;
-	}
-
-	if (!outputFlushScheduled) {
-		outputFlushScheduled = true;
-		setTimeout(flushOutput, OUTPUT_FLUSH_INTERVAL_MS);
-	}
-}
-
-function flushOutput(): void {
-	outputFlushScheduled = false;
-	if (outputChunks.length === 0) return;
-
-	const data = outputChunks.join("");
-	const chunkCount = outputChunks.length;
-	outputChunks = [];
-	outputBytesQueued = 0;
-
-	const payload = Buffer.from(data, "utf8");
-
-	if (DEBUG_OUTPUT_BATCHING) {
-		console.error(
-			`[pty-subprocess] Flushing ${payload.length} bytes (${chunkCount} chunks batched)`,
-		);
-	}
-
-	send(PtySubprocessIpcType.Data, payload);
 }
 
 function maybePauseStdin(): void {
@@ -310,11 +286,11 @@ function handleSpawn(payload: Buffer): void {
 		}
 
 		ptyProcess.onData((data) => {
-			queueOutput(data);
+			outputCoalescer.push(data);
 		});
 
 		ptyProcess.onExit(({ exitCode, signal }) => {
-			flushOutput();
+			outputCoalescer.flushNow();
 
 			const exitPayload = Buffer.allocUnsafe(8);
 			exitPayload.writeInt32LE(exitCode ?? 0, 0);
@@ -431,14 +407,12 @@ function handleSignal(payload: Buffer): void {
 }
 
 function handleDispose(): void {
-	flushOutput();
+	outputCoalescer.flushNow();
 
 	writeQueue.length = 0;
 	queuedBytes = 0;
 	flushing = false;
-	outputChunks = [];
-	outputBytesQueued = 0;
-	outputFlushScheduled = false;
+	outputCoalescer.reset();
 	ptyFd = null;
 
 	if (ptyProcess) {
