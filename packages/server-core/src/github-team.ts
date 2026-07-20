@@ -74,7 +74,10 @@ type GHCheckContext = z.infer<typeof GHCheckContextSchema>;
 // ---------------------------------------------------------------------------
 
 const cache = new Map<string, { data: GitHubStatus; timestamp: number }>();
-const CACHE_TTL_MS = 10_000;
+// 2.5min: gh/git spawns cost 10-35s on slow-DNS networks, so refreshing more
+// often than this just queues pain. Roster's local (session-activity) half
+// stays live; only the PR column ages.
+const CACHE_TTL_MS = 150_000;
 
 /**
  * Fetches GitHub PR status for a worktree using the `gh` CLI.
