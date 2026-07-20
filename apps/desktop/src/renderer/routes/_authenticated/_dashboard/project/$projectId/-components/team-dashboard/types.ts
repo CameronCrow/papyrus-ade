@@ -15,6 +15,13 @@ export type AgentStatus =
 
 export type ChecksStatus = "success" | "failure" | "pending" | "none";
 
+export interface RosterPR {
+	number: number;
+	title: string;
+	url: string;
+	checksStatus: ChecksStatus;
+}
+
 export interface RosterEntry {
 	workspaceId: string;
 	name: string;
@@ -22,13 +29,18 @@ export interface RosterEntry {
 	branch: string | null;
 	status: AgentStatus;
 	session: { model: string | null; contextTokens: number | null } | null;
-	pr: {
-		number: number;
-		title: string;
-		url: string;
-		checksStatus: ChecksStatus;
-	} | null;
+	pr: RosterPR | null;
 	lastActivityAt: number | null;
+}
+
+/**
+ * The GitHub-backed PR overlay for one roster entry (issue #65). Served by the
+ * separate `rosterGitHub` procedure so the local roster paints before the slow
+ * `gh`/`git` reads resolve, then merged onto it client-side.
+ */
+export interface RosterPROverlay {
+	workspaceId: string;
+	pr: RosterPR | null;
 }
 
 export type ActivityKind =

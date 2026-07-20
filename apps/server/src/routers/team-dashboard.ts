@@ -4,6 +4,7 @@ import { localDb } from "@papyrus/server-core/local-db";
 import {
 	buildActivity,
 	buildRoster,
+	buildRosterGitHub,
 	buildWorkBoard,
 	type TeamWorkspaceRef,
 } from "@papyrus/server-core/team-dashboard";
@@ -43,6 +44,12 @@ export const teamDashboardRouter = router({
 	roster: authedProcedure
 		.input(z.object({ projectId: z.string() }))
 		.query(({ input }) => buildRoster(resolveWorkspaceRefs(input.projectId))),
+
+	rosterGitHub: authedProcedure
+		.input(z.object({ projectId: z.string() }))
+		.query(({ input }) =>
+			buildRosterGitHub(resolveWorkspaceRefs(input.projectId)),
+		),
 
 	activity: authedProcedure
 		.input(

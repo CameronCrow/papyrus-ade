@@ -19,6 +19,7 @@ export function TeamDashboard({ projectId }: TeamDashboardProps) {
 		activity,
 		board,
 		isRosterLoading,
+		isRosterGitHubLoading,
 		isActivityLoading,
 		isBoardLoading,
 	} = useTeamDashboard(projectId);
@@ -29,7 +30,11 @@ export function TeamDashboard({ projectId }: TeamDashboardProps) {
 				<div className="mx-auto max-w-[1400px] px-6 py-6">
 					<div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
 						<div className="min-w-0 space-y-6">
-							<RosterHero entries={roster} isLoading={isRosterLoading} />
+							<RosterHero
+								entries={roster}
+								isLoading={isRosterLoading}
+								isPRLoading={isRosterGitHubLoading}
+							/>
 							<WorkBoard board={board} isLoading={isBoardLoading} />
 						</div>
 						<div className="min-w-0">

@@ -1,6 +1,7 @@
 import {
 	buildActivity,
 	buildRoster,
+	buildRosterGitHub,
 	buildWorkBoard,
 	type TeamWorkspaceRef,
 } from "@papyrus/server-core/team-dashboard";
@@ -33,6 +34,14 @@ export const createTeamDashboardRouter = () => {
 			.input(z.object({ projectId: z.string() }))
 			.query(({ input }) =>
 				buildRoster(toWorkspaceRefs(getWorkspacesByProjectId(input.projectId))),
+			),
+
+		rosterGitHub: publicProcedure
+			.input(z.object({ projectId: z.string() }))
+			.query(({ input }) =>
+				buildRosterGitHub(
+					toWorkspaceRefs(getWorkspacesByProjectId(input.projectId)),
+				),
 			),
 
 		activity: publicProcedure
