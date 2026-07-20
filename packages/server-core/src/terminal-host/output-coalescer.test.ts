@@ -189,12 +189,16 @@ describe("output coalescer (real timers)", () => {
 		coalescer.push("hello");
 		expect(flushTimes.length).toBe(0); // not synchronous
 
-		await sleep(15); // loose bound to stay CI-stable
+		// Loaded CI runners add 10ms+ of timer jitter (observed 18ms on the
+		// Windows runner), so the wait and the upper bound stay well clear of
+		// the 2ms window while still proving we beat the old 32ms batch. The
+		// deterministic fake-timer tests above pin the exact 2ms delay.
+		await sleep(25);
 
 		expect(flushTimes.length).toBe(1);
 		const elapsed = flushTimes[0] - start;
 		expect(elapsed).toBeGreaterThanOrEqual(1); // waited for the window
-		expect(elapsed).toBeLessThan(15); // far under the old 32ms batch
+		expect(elapsed).toBeLessThan(30); // under the old 32ms batch
 	});
 
 	it("flood: sustained small-chunk output coalesces (flush count well below push count, no runaway rate)", async () => {
