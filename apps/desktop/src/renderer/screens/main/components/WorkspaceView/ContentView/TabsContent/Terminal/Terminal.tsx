@@ -28,6 +28,7 @@ import {
 	useTerminalConnection,
 	useTerminalCwd,
 	useTerminalHotkeys,
+	useTerminalLatency,
 	useTerminalLifecycle,
 	useTerminalModes,
 	useTerminalRefs,
@@ -56,6 +57,8 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	// stays undefined and renders no chrome. Truthy for all four PaneStatus
 	// values. See docs/tickets/terminal-native-feel.md (issue 3).
 	const paneStatus = pane?.status;
+	// Keystroke→paint latency for the status header (issue #59's hook).
+	const { echoMs } = useTerminalLatency(paneId);
 	const clearPaneInitialData = useTabsStore((s) => s.clearPaneInitialData);
 
 	const { data: workspaceData } = electronTrpc.workspaces.get.useQuery(
@@ -567,12 +570,11 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		>
 			{/* Agent panes only: slim status header. Always present across all four
 			    statuses (a flex child, not an overlay), so status changes never
-			    shift terminal layout. `echoMs` is stubbed until issue #59's
-			    useTerminalLatency hook is wired in here. */}
+			    shift terminal layout. */}
 			{paneStatus && (
 				<TerminalStatusBar
 					status={paneStatus}
-					echoMs={undefined}
+					echoMs={echoMs ?? undefined}
 					onToggleSearch={() => setIsSearchOpen((prev) => !prev)}
 				/>
 			)}
