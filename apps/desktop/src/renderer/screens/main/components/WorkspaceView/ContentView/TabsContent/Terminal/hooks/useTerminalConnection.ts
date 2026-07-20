@@ -9,6 +9,7 @@ import type {
 	TerminalResizeMutate,
 	TerminalWriteMutate,
 } from "../types";
+import { markLatencyInput } from "./latency-tracker";
 
 export interface UseTerminalConnectionOptions {
 	workspaceId: string;
@@ -65,6 +66,9 @@ export function useTerminalConnection({
 			callbacks?.onSettled?.();
 			return;
 		}
+		// Latency metric (issue #59): stamp keystroke-sized writes. After the
+		// mirror guard on purpose — read-only panes must produce no samples.
+		markLatencyInput(input.paneId, input.data);
 		electronTrpcClient.terminal.write
 			.mutate({ ...input, clientId: terminalClientId })
 			.then(() => {

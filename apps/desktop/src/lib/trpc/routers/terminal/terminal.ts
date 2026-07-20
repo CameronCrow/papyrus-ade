@@ -371,6 +371,21 @@ export const createTerminalRouter = () => {
 			return { sessions };
 		}),
 
+		/**
+		 * Latency fallback (issue #59): a cheap renderer→daemon round trip,
+		 * measured client-side by useTerminalLatency when the user hasn't
+		 * typed for >30s. The desktop router tree is the API contract the
+		 * renderer types against, so this mirrors papyrus-server's
+		 * terminal.ping (where it deliberately rides the WS link the
+		 * keystrokes use). list-sessions is the lightest existing daemon
+		 * request — no new protocol message needed.
+		 */
+		ping: publicProcedure.mutation(async () => {
+			const started = Date.now();
+			await terminal.management.listSessions();
+			return { daemonMs: Date.now() - started };
+		}),
+
 		killAllDaemonSessions: publicProcedure.mutation(async () => {
 			const client = getTerminalHostClient();
 			const before = await terminal.management.listSessions();
