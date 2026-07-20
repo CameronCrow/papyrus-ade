@@ -40,9 +40,12 @@ function sessionLine(session: RosterEntry["session"]): string | null {
 
 interface AgentCardProps {
 	entry: RosterEntry;
+	/** GitHub PR overlay still loading (issue #65): reserve the PR slot so the
+	 * badge hydrating in later causes no layout shift. */
+	prPending?: boolean;
 }
 
-export function AgentCard({ entry }: AgentCardProps) {
+export function AgentCard({ entry, prPending }: AgentCardProps) {
 	const navigate = useNavigate();
 	const session = sessionLine(entry.session);
 
@@ -77,7 +80,7 @@ export function AgentCard({ entry }: AgentCardProps) {
 
 			<div className="flex items-center justify-between gap-2">
 				<AgentStatusBadge status={entry.status} />
-				{entry.pr && (
+				{entry.pr ? (
 					<span className="flex items-center gap-1 text-[11px] text-muted-foreground">
 						<span
 							className={cn(
@@ -87,7 +90,17 @@ export function AgentCard({ entry }: AgentCardProps) {
 						/>
 						<span className="font-mono tabular-nums">#{entry.pr.number}</span>
 					</span>
-				)}
+				) : prPending ? (
+					// Reserve the PR slot while the GitHub overlay resolves so the
+					// badge hydrating in later doesn't shift the row (issue #65).
+					<span
+						aria-hidden
+						className="flex items-center gap-1 text-[11px] text-muted-foreground/50"
+					>
+						<span className="size-1.5 shrink-0 animate-pulse rounded-full bg-muted-foreground/20" />
+						<span className="font-mono tabular-nums opacity-0">#0000</span>
+					</span>
+				) : null}
 			</div>
 
 			{session && (
