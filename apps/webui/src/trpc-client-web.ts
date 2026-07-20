@@ -29,7 +29,15 @@ function links() {
 	return [
 		sessionIdLink<AppRouter>(),
 		splitLink({
-			condition: (op) => op.type === "subscription",
+			// Subscriptions must ride the WS; terminal mutations (write/resize —
+			// every keystroke) do too, so typing costs one WS frame instead of an
+			// HTTP POST (issue #59). Auth is carried by the WS URL (?token=) and
+			// verified at upgrade time; wsLink buffers ops across reconnects, so
+			// mutations are as safe here as the existing stream subscription.
+			// Queries stay on httpBatchLink for react-query batching.
+			condition: (op) =>
+				op.type === "subscription" ||
+				(op.type === "mutation" && op.path.startsWith("terminal.")),
 			true: wsLink<AppRouter>({ client: wsClient, transformer: superjson }),
 			false: httpBatchLink({
 				url: "/trpc",

@@ -210,6 +210,20 @@ export const terminalRouter = router({
 	}),
 
 	/**
+	 * Latency fallback (issue #59): a cheap client→server→daemon round trip,
+	 * measured client-side by useTerminalLatency only when the user hasn't
+	 * typed for >30s (no fresh echo samples). Deliberately a mutation:
+	 * terminal.* mutations ride the WS link in the webui, so this measures
+	 * the same transport keystrokes use. list-sessions is the lightest
+	 * existing daemon request — no new protocol message needed.
+	 */
+	ping: authedProcedure.mutation(async () => {
+		const started = Date.now();
+		await terminal().listDaemonSessions();
+		return { daemonMs: Date.now() - started };
+	}),
+
+	/**
 	 * Kill every live daemon session (the Terminal settings "Kill all sessions"
 	 * button). Mirrors the desktop procedure: kill each pane, then poll until the
 	 * daemon reports them gone so the UI's count is accurate.
