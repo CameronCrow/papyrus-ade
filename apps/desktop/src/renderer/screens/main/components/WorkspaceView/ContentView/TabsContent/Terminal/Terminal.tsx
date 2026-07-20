@@ -11,7 +11,12 @@ import { electronTrpcClient } from "renderer/lib/trpc-client";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
 import { getTerminalProfile } from "shared/terminal-profiles";
-import { SessionKilledOverlay, TerminalKeyBar } from "./components";
+import {
+	SessionKilledOverlay,
+	TerminalKeyBar,
+	TerminalStatusBar,
+	WaitingOnYouBar,
+} from "./components";
 import {
 	DEFAULT_TERMINAL_FONT_FAMILY,
 	DEFAULT_TERMINAL_FONT_SIZE,
@@ -44,6 +49,13 @@ const stripLeadingEmoji = (text: string) =>
 export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	const pane = useTabsStore((s) => s.panes[paneId]);
 	const paneInitialCwd = pane?.initialCwd;
+	// Agent-pane gate (issue #60): pane `status` is only ever set on
+	// wrapper-launched agents (working/permission/review via useAgentHookListener;
+	// the exit/keystroke fallbacks only touch panes already in
+	// working/permission) and is never reset to undefined — so a plain shell
+	// stays undefined and renders no chrome. Truthy for all four PaneStatus
+	// values. See docs/tickets/terminal-native-feel.md (issue 3).
+	const paneStatus = pane?.status;
 	const clearPaneInitialData = useTabsStore((s) => s.clearPaneInitialData);
 
 	const { data: workspaceData } = electronTrpc.workspaces.get.useQuery(
@@ -449,6 +461,22 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		xterm.options.theme = terminalTheme;
 	}, [terminalTheme]);
 
+	// Waiting-on-you staleness clear (issue #60): no agent hook fires when the
+	// user denies a permission prompt or interrupts with Ctrl+C, so the
+	// "permission" status that drives the WaitingOnYouBar would stick. xterm's
+	// onData fires on real user input only (keystrokes/paste, never programmatic
+	// writes), so any typed response — approve, deny, or interrupt — clears the
+	// bar. Mirrors the mobile-Esc clear in handleKeyBarEscape below.
+	useEffect(() => {
+		if (!xtermInstance) return;
+		const disposable = xtermInstance.onData(() => {
+			if (useTabsStore.getState().panes[paneId]?.status === "permission") {
+				useTabsStore.getState().setPaneStatus(paneId, "idle");
+			}
+		});
+		return () => disposable.dispose();
+	}, [xtermInstance, paneId]);
+
 	const { data: fontSettings } = electronTrpc.settings.getFontSettings.useQuery(
 		undefined,
 		{
@@ -537,6 +565,17 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 			onDragOver={handleDragOver}
 			onDrop={handleDrop}
 		>
+			{/* Agent panes only: slim status header. Always present across all four
+			    statuses (a flex child, not an overlay), so status changes never
+			    shift terminal layout. `echoMs` is stubbed until issue #59's
+			    useTerminalLatency hook is wired in here. */}
+			{paneStatus && (
+				<TerminalStatusBar
+					status={paneStatus}
+					echoMs={undefined}
+					onToggleSearch={() => setIsSearchOpen((prev) => !prev)}
+				/>
+			)}
 			<div className="relative min-h-0 w-full flex-1 overflow-hidden">
 				<TerminalSearch
 					searchAddon={searchAddonRef.current}
@@ -558,6 +597,14 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 					<SessionKilledOverlay onRestart={restartTerminal} />
 				)}
 				<div ref={terminalRef} className="h-full w-full" />
+				{/* Loud sticky bar, agent panes only, only while blocked on a
+				    permission prompt. Absolute overlay so it never reflows the
+				    terminal (no layout shift) and sits above the mobile key bar.
+				    Clears when status leaves "permission" — incl. the keystroke
+				    clear above (no hook fires on denial/Ctrl+C). */}
+				{paneStatus === "permission" && (
+					<WaitingOnYouBar onClick={() => xtermRef.current?.focus()} />
+				)}
 			</div>
 			{isMobile && (
 				<TerminalKeyBar
