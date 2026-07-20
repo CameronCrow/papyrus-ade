@@ -1,15 +1,20 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import {
 	type AgentRef,
 	type MailEvent,
 	type TeamGitHubSnapshot,
+	clearTeamGitHubSnapshotCache,
 	deriveActivityFeed,
 	deriveWorkBoard,
 	fetchTeamGitHubSnapshot,
+	refreshTeamGitHubSnapshotCache,
+	seedTeamGitHubSnapshotCacheForTest,
 } from "./github-team";
+
+const SNAPSHOT_CACHE_TTL_MS = 150_000;
 
 function issue(
 	over: Partial<TeamGitHubSnapshot["issues"][number]> &
@@ -268,5 +273,113 @@ describe("fetchTeamGitHubSnapshot", () => {
 	it("returns empty arrays when pointed at a non-repo dir", async () => {
 		const snap = await fetchTeamGitHubSnapshot(dir);
 		expect(snap).toEqual({ issues: [], prs: [] });
+	});
+});
+
+describe("fetchTeamGitHubSnapshot cache (issue #66)", () => {
+	afterEach(() => {
+		clearTeamGitHubSnapshotCache();
+	});
+
+	function snapshot(n: number): TeamGitHubSnapshot {
+		return { issues: [issue({ number: n })], prs: [] };
+	}
+
+	it("fresh miss awaits the live fetch", async () => {
+		let calls = 0;
+		const fetcher = async () => {
+			calls++;
+			return snapshot(1);
+		};
+		const result = await refreshTeamGitHubSnapshotCache("repo-a", fetcher);
+		expect(result).toEqual(snapshot(1));
+		expect(calls).toBe(1);
+	});
+
+	it("hit within TTL returns cached without spawning", async () => {
+		seedTeamGitHubSnapshotCacheForTest("repo-b", snapshot(1), 0);
+
+		// A fresh-TTL entry means fetchTeamGitHubSnapshot must return straight
+		// from the cache without ever touching the (real, `gh`-backed) fetcher —
+		// there is no injectable-fetcher seam on this path to spy on, so the
+		// absence of a spawn is exactly what "resolves without needing gh" means
+		// here: the call resolves immediately with the seeded data.
+		const result = await fetchTeamGitHubSnapshot("repo-b");
+		expect(result).toEqual(snapshot(1));
+	});
+
+	it("stale hit returns stale immediately and triggers exactly one refresh under concurrent calls", async () => {
+		let calls = 0;
+		let resolveRefresh: (() => void) | undefined;
+		const fetcher = async () => {
+			calls++;
+			await new Promise<void>((resolve) => {
+				resolveRefresh = resolve;
+			});
+			return snapshot(2);
+		};
+
+		// Three concurrent low-level refresh calls for the same key must share
+		// a single in-flight fetch (this is the exact primitive a stale hit in
+		// fetchTeamGitHubSnapshot delegates to).
+		const first = refreshTeamGitHubSnapshotCache("repo-c", fetcher);
+		const second = refreshTeamGitHubSnapshotCache("repo-c", fetcher);
+		const third = refreshTeamGitHubSnapshotCache("repo-c", fetcher);
+		expect(calls).toBe(1);
+
+		resolveRefresh?.();
+		const [r1, r2, r3] = await Promise.all([first, second, third]);
+		expect(r1).toEqual(snapshot(2));
+		expect(r2).toEqual(snapshot(2));
+		expect(r3).toEqual(snapshot(2));
+		expect(calls).toBe(1);
+	});
+
+	it("stale read through the public API returns stale data without waiting on the refresh", async () => {
+		let resolveSlow: ((value: TeamGitHubSnapshot) => void) | undefined;
+		seedTeamGitHubSnapshotCacheForTest(
+			"repo-d",
+			snapshot(1),
+			SNAPSHOT_CACHE_TTL_MS + 1,
+		);
+
+		// Kick a slow low-level refresh under the same key first, so the public
+		// call below observes it already in flight (it would otherwise start
+		// its own refresh against the real `gh`-backed fetcher).
+		const refreshPromise = refreshTeamGitHubSnapshotCache("repo-d", () => {
+			return new Promise<TeamGitHubSnapshot>((resolve) => {
+				resolveSlow = resolve;
+			});
+		});
+
+		const result = await fetchTeamGitHubSnapshot("repo-d");
+		expect(result).toEqual(snapshot(1));
+
+		resolveSlow?.(snapshot(2));
+		await refreshPromise;
+	});
+
+	it("refresh failure keeps serving stale (cache untouched, no throw to the caller)", async () => {
+		const seeded = await refreshTeamGitHubSnapshotCache(
+			"repo-e",
+			async () => snapshot(1),
+		);
+		expect(seeded).toEqual(snapshot(1));
+
+		// A failing refresh rejects its own promise (a caller who explicitly
+		// awaits a refresh can observe the failure)...
+		const failing = refreshTeamGitHubSnapshotCache("repo-e", async () => {
+			throw new Error("gh exploded");
+		});
+		await expect(failing).rejects.toThrow("gh exploded");
+
+		// ...but must not clobber the cached entry: the failed refresh's `.then`
+		// (where snapshotCache.set happens) never ran, so the still-fresh entry
+		// from the successful seed above is untouched. Reading through the
+		// public API confirms it — a fresh-TTL hit, no fetcher involved at all,
+		// still returns the last good snapshot rather than throwing or going
+		// empty.
+		const stillCached = await fetchTeamGitHubSnapshot("repo-e");
+		expect(stillCached).toEqual(seeded);
 	});
 });

@@ -564,8 +564,13 @@ const GHTeamPRSchema = z.object({
  *
  * NEVER throws: `gh` missing, not a repo, not authenticated, or any parse error
  * all degrade to `{ issues: [], prs: [] }`.
+ *
+ * This is the transport-side boundary (issue #67 owns rewriting what happens
+ * inside it). `fetchTeamGitHubSnapshot` below is the cached, public entry
+ * point — keep the cache wrapped around this function rather than folded
+ * into it, so the two changes compose.
  */
-export async function fetchTeamGitHubSnapshot(
+async function fetchTeamGitHubSnapshotUncached(
 	repoPath: string,
 ): Promise<TeamGitHubSnapshot> {
 	try {
@@ -577,6 +582,92 @@ export async function fetchTeamGitHubSnapshot(
 	} catch {
 		return { issues: [], prs: [] };
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Per-repoPath cache for fetchTeamGitHubSnapshot (issue #66), stale-while-
+// revalidate with single-flight refresh dedupe. Same shape as the
+// fetchGitHubPRStatus cache above, same TTL (af80ddc): activity(15s) and
+// board(30s) dashboard polls both call this per cycle, so without a shared
+// cache every cycle spawns up to 4 `gh` processes costing 10-35s each on
+// slow-DNS networks.
+const snapshotCache = new Map<
+	string,
+	{ data: TeamGitHubSnapshot; timestamp: number }
+>();
+const snapshotRefreshes = new Map<string, Promise<TeamGitHubSnapshot>>();
+const SNAPSHOT_CACHE_TTL_MS = 150_000;
+
+/**
+ * Kicks (or reuses) a single in-flight refresh for `key`. On success the
+ * cache entry is updated; on failure the cache is left untouched, so a
+ * stale read served alongside a failed refresh just keeps being stale until
+ * a later refresh succeeds. Exported (not just internal) so the caching
+ * behavior itself — dedupe, stale-serving, refresh failure — can be unit
+ * tested with an injected fetcher, without needing to mock `gh`.
+ */
+export function refreshTeamGitHubSnapshotCache(
+	key: string,
+	fetcher: (key: string) => Promise<TeamGitHubSnapshot> = fetchTeamGitHubSnapshotUncached,
+): Promise<TeamGitHubSnapshot> {
+	const inflight = snapshotRefreshes.get(key);
+	if (inflight) {
+		return inflight;
+	}
+	const promise = fetcher(key)
+		.then((data) => {
+			snapshotCache.set(key, { data, timestamp: Date.now() });
+			return data;
+		})
+		.finally(() => {
+			snapshotRefreshes.delete(key);
+		});
+	snapshotRefreshes.set(key, promise);
+	return promise;
+}
+
+/** Test-only: clears the module-level snapshot cache between test cases. */
+export function clearTeamGitHubSnapshotCache(): void {
+	snapshotCache.clear();
+	snapshotRefreshes.clear();
+}
+
+/**
+ * Test-only: seeds the cache with `data` at a given age, so tests can put an
+ * entry past `SNAPSHOT_CACHE_TTL_MS` without waiting 150 real seconds.
+ */
+export function seedTeamGitHubSnapshotCacheForTest(
+	key: string,
+	data: TeamGitHubSnapshot,
+	ageMs: number,
+): void {
+	snapshotCache.set(key, { data, timestamp: Date.now() - ageMs });
+}
+
+/**
+ * Cached, stale-while-revalidate entry point for the team dashboard snapshot.
+ * First-ever call (no cache) awaits the live fetch. A hit within the TTL
+ * returns the cached snapshot without spawning anything. An expired entry is
+ * returned immediately while a single background refresh is kicked off
+ * (concurrent callers share it); a failed refresh just leaves the stale
+ * entry in place for the next attempt.
+ */
+export async function fetchTeamGitHubSnapshot(
+	repoPath: string,
+): Promise<TeamGitHubSnapshot> {
+	const cached = snapshotCache.get(repoPath);
+	if (!cached) {
+		return refreshTeamGitHubSnapshotCache(repoPath);
+	}
+	if (Date.now() - cached.timestamp < SNAPSHOT_CACHE_TTL_MS) {
+		return cached.data;
+	}
+	// Stale: serve immediately, refresh in the background (single-flight).
+	// Nobody awaits this, so a rejection here is intentionally swallowed —
+	// the stale value returned above keeps being served until a refresh
+	// succeeds.
+	refreshTeamGitHubSnapshotCache(repoPath).catch(() => {});
+	return cached.data;
 }
 
 async function fetchTeamIssues(
