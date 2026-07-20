@@ -2,86 +2,415 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { CheckItem, GitHubStatus } from "@superset/local-db";
 import { z } from "zod";
-import { execWithShellEnv, getProcessEnvWithShellPath } from "./shell-env";
+import { execWithShellEnv } from "./shell-env";
 
 /**
  * GitHub team + PR-status helpers, lifted out of the desktop app
  * (apps/desktop/src/lib/trpc/routers/workspaces/utils/github, issue #51) so the
- * same `gh`/`git` CLI logic is shared by the desktop app and papyrus-server.
+ * same logic is shared by the desktop app and papyrus-server.
+ *
+ * Transport (issue #67): every GitHub datum is fetched in-process via Node's
+ * global `fetch` against the GitHub REST v3 API. undici (Node) and Bun both pool
+ * and keep-alive connections by default, so the DNS+TLS handshake is paid once
+ * per server lifetime instead of once per spawned `gh`/`git ls-remote` process
+ * (10-35s each on slow-DNS networks). The only remaining child processes are
+ * fast, purely-local git reads (`git config`, `git rev-parse`, `git merge-base`)
+ * and a single lazy `gh auth token` to obtain a credential.
  *
  * HARD CONSTRAINT: this module must be import-time DB-free and Electron-free
  * (it runs under bun on Windows). The only `@superset/local-db` reference is a
- * type-only import (erased at compile time). Everything else is pure gh/git/fs
- * with paths passed as plain strings.
+ * type-only import (erased at compile time).
  */
 
 const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
-// gh CLI output schemas (lifted from the desktop github/types.ts)
+// Auth: one lazy `gh auth token`, cached in-process, GITHUB_TOKEN fallback.
 // ---------------------------------------------------------------------------
 
-const GHCheckContextSchema = z.object({
-	name: z.string().optional(),
-	context: z.string().optional(), // StatusContext uses 'context' instead of 'name'
-	state: z.enum(["SUCCESS", "FAILURE", "PENDING", "ERROR"]).optional(),
-	status: z.string().optional(), // CheckRun status: COMPLETED, IN_PROGRESS, etc.
-	conclusion: z
-		.enum([
-			"SUCCESS",
-			"FAILURE",
-			"CANCELLED",
-			"SKIPPED",
-			"TIMED_OUT",
-			"ACTION_REQUIRED",
-			"NEUTRAL",
-			"", // Can be empty string when in progress
-		])
-		.optional(),
-	detailsUrl: z.string().optional(),
-	targetUrl: z.string().optional(), // StatusContext uses 'targetUrl' instead of 'detailsUrl'
-	startedAt: z.string().optional(),
-	completedAt: z.string().optional(),
-	workflowName: z.string().optional(),
+let tokenPromise: Promise<string | null> | null = null;
+
+/**
+ * Resolves a GitHub token: `gh auth token` first (so an authenticated gh session
+ * is reused), then the `GITHUB_TOKEN`/`GH_TOKEN` env var if gh is absent or not
+ * signed in. Returns null when neither yields a token.
+ */
+async function resolveGitHubToken(): Promise<string | null> {
+	try {
+		const { stdout } = await execWithShellEnv("gh", ["auth", "token"], {
+			timeout: 10_000,
+		});
+		const token = stdout.trim();
+		if (token) {
+			return token;
+		}
+	} catch {
+		// gh missing or not authenticated — fall through to the env fallback.
+	}
+	const envToken = (
+		process.env.GITHUB_TOKEN ||
+		process.env.GH_TOKEN ||
+		""
+	).trim();
+	return envToken || null;
+}
+
+/** Returns the cached token, resolving it lazily on first use. */
+function getGitHubToken(): Promise<string | null> {
+	if (!tokenPromise) {
+		tokenPromise = resolveGitHubToken();
+	}
+	return tokenPromise;
+}
+
+/**
+ * Clears the cached auth token. Exported so tests can reset auth state between
+ * cases; also used internally to re-run `gh auth token` after a 401.
+ */
+export function __resetGitHubAuthCacheForTests(): void {
+	tokenPromise = null;
+}
+
+// ---------------------------------------------------------------------------
+// HTTP transport: in-process fetch with a single 401 token-refresh retry.
+// ---------------------------------------------------------------------------
+
+const GITHUB_USER_AGENT = "papyrus-ade-dashboard";
+
+function rawGitHubFetch(url: string, token: string): Promise<Response> {
+	return fetch(url, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: "application/vnd.github+json",
+			"X-GitHub-Api-Version": "2022-11-28",
+			// GitHub requires a User-Agent on every request.
+			"User-Agent": GITHUB_USER_AGENT,
+		},
+		// undici/Bun keep connections alive via the default global dispatcher, so
+		// no explicit Agent is needed — the socket is reused across every call
+		// below for the life of the process.
+	});
+}
+
+/**
+ * Performs an authenticated GitHub request. Returns null when no token is
+ * available (degraded/empty behavior). On 401 the cached token is invalidated,
+ * `gh auth token` is re-run once, and the request is retried a single time.
+ */
+async function githubRequest(url: string): Promise<Response | null> {
+	const token = await getGitHubToken();
+	if (!token) {
+		return null;
+	}
+
+	let res = await rawGitHubFetch(url, token);
+	if (res.status === 401) {
+		// Token may be stale (rotated/expired) — drop it, re-run gh auth token
+		// once, and retry the request a single time.
+		try {
+			await res.text();
+		} catch {
+			// ignore body-drain failure
+		}
+		__resetGitHubAuthCacheForTests();
+		const retryToken = await getGitHubToken();
+		if (!retryToken) {
+			return null;
+		}
+		res = await rawGitHubFetch(url, retryToken);
+	}
+	return res;
+}
+
+/** GETs a URL and parses JSON, degrading to null on any failure or non-2xx. */
+async function githubGetJson(url: string): Promise<unknown | null> {
+	try {
+		const res = await githubRequest(url);
+		if (!res) {
+			return null;
+		}
+		if (!res.ok) {
+			try {
+				await res.text();
+			} catch {
+				// ignore body-drain failure
+			}
+			return null;
+		}
+		return await res.json();
+	} catch {
+		return null;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Repo resolution: owner/repo from the local remote (no network).
+// ---------------------------------------------------------------------------
+
+export type RepoRef = {
+	owner: string;
+	repo: string;
+	/** REST API base, e.g. https://api.github.com or https://ghe.host/api/v3. */
+	apiBase: string;
+	/** Canonical repo web URL, e.g. https://github.com/owner/repo. */
+	htmlUrl: string;
+};
+
+/**
+ * Parses a git remote URL (https, ssh, or scp-style) into owner/repo plus the
+ * matching REST API base and web URL. Returns null when it can't be parsed.
+ * Exported for unit tests.
+ */
+export function parseRepoRef(remoteUrl: string): RepoRef | null {
+	const trimmed = remoteUrl.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	// Matches: https://host/owner/repo(.git), ssh://git@host/owner/repo(.git),
+	// git@host:owner/repo(.git), with optional user@ and trailing slash/.git.
+	const match = trimmed.match(
+		/^(?:https?:\/\/|ssh:\/\/)?(?:[^@/]+@)?([^/:]+)[:/](.+?)(?:\.git)?\/?$/,
+	);
+	if (!match) {
+		return null;
+	}
+
+	const host = match[1];
+	const parts = match[2].split("/").filter(Boolean);
+	if (parts.length < 2) {
+		return null;
+	}
+	const owner = parts[parts.length - 2];
+	const repo = parts[parts.length - 1];
+	const apiBase =
+		host === "github.com" ? "https://api.github.com" : `https://${host}/api/v3`;
+	const htmlUrl = `https://${host}/${owner}/${repo}`;
+	return { owner, repo, apiBase, htmlUrl };
+}
+
+/** Reads `remote.origin.url` locally and parses it to a RepoRef. */
+async function getRepoRef(worktreePath: string): Promise<RepoRef | null> {
+	try {
+		const { stdout } = await execFileAsync(
+			"git",
+			["-C", worktreePath, "config", "--get", "remote.origin.url"],
+			{ timeout: 10_000 },
+		);
+		return parseRepoRef(stdout);
+	} catch {
+		return null;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// REST response schemas (snake_case) — kept permissive so one odd field never
+// sinks a whole fetch.
+// ---------------------------------------------------------------------------
+
+const RestCheckRunSchema = z.object({
+	name: z.string().nullish(),
+	status: z.string().nullish(), // queued | in_progress | completed
+	conclusion: z.string().nullish(), // success | failure | neutral | ...
+	details_url: z.string().nullish(),
+	html_url: z.string().nullish(),
 });
 
-const GHPRResponseSchema = z.object({
+const RestCheckRunsSchema = z.object({
+	check_runs: z.array(RestCheckRunSchema).nullish(),
+});
+
+const RestCombinedStatusSchema = z.object({
+	statuses: z
+		.array(
+			z.object({
+				context: z.string().nullish(),
+				state: z.string().nullish(), // success | failure | pending | error
+				target_url: z.string().nullish(),
+			}),
+		)
+		.nullish(),
+});
+
+const RestHeadSchema = z.object({ ref: z.string(), sha: z.string() });
+
+const RestPullSchema = z.object({
 	number: z.number(),
 	title: z.string(),
-	url: z.string(),
-	state: z.enum(["OPEN", "CLOSED", "MERGED"]),
-	isDraft: z.boolean(),
-	mergedAt: z.string().nullable(),
-	additions: z.number(),
-	deletions: z.number(),
-	headRefOid: z.string(),
-	reviewDecision: z
-		.enum(["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED", ""])
-		.nullable(),
-	// statusCheckRollup is an array directly, not { contexts: [...] }
-	statusCheckRollup: z.array(GHCheckContextSchema).nullable(),
+	html_url: z.string(),
+	state: z.string(), // open | closed
+	draft: z.boolean().nullish(),
+	merged_at: z.string().nullish(),
+	body: z.string().nullish(),
+	updated_at: z.string(),
+	head: RestHeadSchema,
 });
 
-const GHRepoResponseSchema = z.object({
-	url: z.string(),
+const RestPullDetailSchema = RestPullSchema.extend({
+	additions: z.number().nullish(),
+	deletions: z.number().nullish(),
 });
 
-type GHPRResponse = z.infer<typeof GHPRResponseSchema>;
-type GHCheckContext = z.infer<typeof GHCheckContextSchema>;
+const RestReviewSchema = z.object({
+	user: z.object({ login: z.string() }).nullish(),
+	state: z.string(), // APPROVED | CHANGES_REQUESTED | COMMENTED | DISMISSED | PENDING
+});
+
+const RestIssueSchema = z.object({
+	number: z.number(),
+	title: z.string(),
+	html_url: z.string(),
+	state: z.string(), // open | closed
+	labels: z
+		.array(z.union([z.string(), z.object({ name: z.string().nullish() })]))
+		.nullish(),
+	assignees: z.array(z.object({ login: z.string() })).nullish(),
+	body: z.string().nullish(),
+	updated_at: z.string(),
+	closed_at: z.string().nullish(),
+	// Present iff this "issue" is actually a pull request (REST /issues mixes them).
+	pull_request: z.unknown().nullish(),
+});
+
+type RestPull = z.infer<typeof RestPullSchema>;
 
 // ---------------------------------------------------------------------------
-// Per-worktree PR status (fetchGitHubPRStatus) — lifted from desktop
+// Checks: REST check-runs + legacy commit statuses -> CheckItem[] + rollup.
+// (This is the REST equivalent of gh's statusCheckRollup.)
+// ---------------------------------------------------------------------------
+
+function mapCheckRunStatus(
+	status: string | null | undefined,
+	conclusion: string | null | undefined,
+): CheckItem["status"] {
+	// A run that hasn't completed is still pending regardless of conclusion.
+	if (status && status !== "completed") {
+		return "pending";
+	}
+	switch (conclusion) {
+		case "success":
+			return "success";
+		case "failure":
+		case "timed_out":
+		case "action_required":
+		case "startup_failure":
+			return "failure";
+		case "cancelled":
+			return "cancelled";
+		case "skipped":
+		case "neutral":
+		case "stale":
+			return "skipped";
+		default:
+			return "pending";
+	}
+}
+
+function mapCommitStatusState(
+	state: string | null | undefined,
+): CheckItem["status"] {
+	switch (state) {
+		case "success":
+			return "success";
+		case "failure":
+		case "error":
+			return "failure";
+		default:
+			return "pending";
+	}
+}
+
+/**
+ * Normalizes a commit's check-runs response and combined-status response into a
+ * flat CheckItem list (the shape the dashboard renders). Either argument may be
+ * null/garbage. Exported for unit tests.
+ */
+export function restChecksToCheckItems(
+	checkRunsJson: unknown,
+	combinedStatusJson: unknown,
+): CheckItem[] {
+	const items: CheckItem[] = [];
+
+	const runs = RestCheckRunsSchema.safeParse(checkRunsJson);
+	if (runs.success && runs.data.check_runs) {
+		for (const run of runs.data.check_runs) {
+			const url = run.details_url || run.html_url || undefined;
+			items.push({
+				name: run.name || "Unknown check",
+				status: mapCheckRunStatus(run.status, run.conclusion),
+				...(url ? { url } : {}),
+			});
+		}
+	}
+
+	const statuses = RestCombinedStatusSchema.safeParse(combinedStatusJson);
+	if (statuses.success && statuses.data.statuses) {
+		for (const s of statuses.data.statuses) {
+			items.push({
+				name: s.context || "Unknown check",
+				status: mapCommitStatusState(s.state),
+				...(s.target_url ? { url: s.target_url } : {}),
+			});
+		}
+	}
+
+	return items;
+}
+
+/**
+ * Rolls a CheckItem list up into the single-word status the UI uses:
+ * failure > pending > success, or "none" when there are no checks. skipped and
+ * cancelled items count as neither failure nor pending. Exported for unit tests.
+ */
+export function checksStatusFromItems(
+	items: CheckItem[],
+): "success" | "failure" | "pending" | "none" {
+	if (items.length === 0) {
+		return "none";
+	}
+	let hasFailure = false;
+	let hasPending = false;
+	for (const item of items) {
+		if (item.status === "failure") {
+			hasFailure = true;
+		} else if (item.status === "pending") {
+			hasPending = true;
+		}
+	}
+	if (hasFailure) {
+		return "failure";
+	}
+	if (hasPending) {
+		return "pending";
+	}
+	return "success";
+}
+
+/** Fetches check-runs + combined statuses for a commit and normalizes them. */
+async function fetchCheckItems(
+	ref: RepoRef,
+	sha: string,
+): Promise<CheckItem[]> {
+	const base = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/commits/${encodeURIComponent(sha)}`;
+	const [runsJson, statusJson] = await Promise.all([
+		githubGetJson(`${base}/check-runs?per_page=100`),
+		githubGetJson(`${base}/status?per_page=100`),
+	]);
+	return restChecksToCheckItems(runsJson, statusJson);
+}
+
+// ---------------------------------------------------------------------------
+// Per-worktree PR status (fetchGitHubPRStatus)
 // ---------------------------------------------------------------------------
 
 const cache = new Map<string, { data: GitHubStatus; timestamp: number }>();
-// 2.5min: gh/git spawns cost 10-35s on slow-DNS networks, so refreshing more
-// often than this just queues pain. Roster's local (session-activity) half
-// stays live; only the PR column ages.
+// 2.5min: even in-process fetches age gracefully here. Roster's local
+// (session-activity) half stays live; only the PR column ages.
 const CACHE_TTL_MS = 150_000;
 
 /**
- * Fetches GitHub PR status for a worktree using the `gh` CLI.
- * Returns null if `gh` is not installed, not authenticated, or on error.
+ * Fetches GitHub PR status for a worktree via the REST API.
+ * Returns null if the remote can't be resolved, there's no token, or on error.
  */
 export async function fetchGitHubPRStatus(
 	worktreePath: string,
@@ -91,236 +420,211 @@ export async function fetchGitHubPRStatus(
 		return cached.data;
 	}
 
+	const started = Date.now();
 	try {
-		const repoUrl = await getRepoUrl(worktreePath);
-		if (!repoUrl) {
+		const ref = await getRepoRef(worktreePath);
+		if (!ref) {
 			return null;
 		}
 
 		const { stdout: branchOutput } = await execFileAsync(
 			"git",
-			["rev-parse", "--abbrev-ref", "HEAD"],
-			{ cwd: worktreePath },
+			["-C", worktreePath, "rev-parse", "--abbrev-ref", "HEAD"],
+			{ timeout: 10_000 },
 		);
 		const branchName = branchOutput.trim();
 
 		const [branchExists, prInfo] = await Promise.all([
-			branchExistsOnRemote(worktreePath, branchName),
-			getPRForBranch(worktreePath, branchName),
+			branchExistsOnRemote(ref, branchName),
+			getPRForBranch(ref, worktreePath, branchName),
 		]);
 
 		const result: GitHubStatus = {
 			pr: prInfo,
-			repoUrl,
+			repoUrl: ref.htmlUrl,
 			branchExistsOnRemote: branchExists,
 			lastRefreshed: Date.now(),
 		};
 
 		cache.set(worktreePath, { data: result, timestamp: Date.now() });
-
 		return result;
 	} catch {
 		return null;
+	} finally {
+		if (process.env.PAPYRUS_GH_TIMING) {
+			console.log(
+				`[github-team] fetchGitHubPRStatus(${worktreePath}) ${Date.now() - started}ms`,
+			);
+		}
 	}
 }
 
 /**
- * Returns true if `branchName` exists on the `origin` remote. Simplified lift of
- * the desktop `branchExistsOnRemote` (which returned a categorized result) —
- * fetchGitHubPRStatus only needs the boolean. Any failure (git missing, network,
- * auth, no matching ref) degrades to `false`.
+ * Returns true if `branchName` exists on origin via
+ * `GET /repos/{owner}/{repo}/branches/{branch}` (200 = yes, 404 = no). Any
+ * failure degrades to false.
  */
 async function branchExistsOnRemote(
-	worktreePath: string,
+	ref: RepoRef,
 	branchName: string,
 ): Promise<boolean> {
 	try {
-		const env = await getProcessEnvWithShellPath();
-		await execFileAsync(
-			"git",
-			[
-				"-C",
-				worktreePath,
-				"ls-remote",
-				"--exit-code",
-				"--heads",
-				"origin",
-				branchName,
-			],
-			{ env, timeout: 30_000 },
-		);
-		// Exit code 0 = branch exists (--exit-code flag ensures this).
-		return true;
+		// Branch names contain literal slashes; the API wants them unencoded.
+		const url = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/branches/${branchName}`;
+		const res = await githubRequest(url);
+		if (!res) {
+			return false;
+		}
+		const exists = res.status === 200;
+		try {
+			await res.text(); // drain so the socket returns to the keep-alive pool
+		} catch {
+			// ignore
+		}
+		return exists;
 	} catch {
 		return false;
 	}
 }
 
-async function getRepoUrl(worktreePath: string): Promise<string | null> {
-	try {
-		const { stdout } = await execWithShellEnv(
-			"gh",
-			["repo", "view", "--json", "url"],
-			{ cwd: worktreePath },
-		);
-		const raw = JSON.parse(stdout);
-		const result = GHRepoResponseSchema.safeParse(raw);
-		if (!result.success) {
-			console.error("[GitHub] Repo schema validation failed:", result.error);
-			console.error("[GitHub] Raw data:", JSON.stringify(raw, null, 2));
-			return null;
-		}
-		return result.data.url;
-	} catch {
-		return null;
-	}
-}
-
-const PR_JSON_FIELDS =
-	"number,title,url,state,isDraft,mergedAt,additions,deletions,headRefOid,reviewDecision,statusCheckRollup";
-
+/**
+ * Finds the PR for a branch via
+ * `GET /repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=all`, then keeps
+ * only a candidate whose head commit shares ancestry with local HEAD.
+ */
 async function getPRForBranch(
+	ref: RepoRef,
 	worktreePath: string,
 	branchName: string,
 ): Promise<GitHubStatus["pr"]> {
-	const byTracking = await getPRByBranchTracking(worktreePath);
-	if (byTracking) {
-		return byTracking;
+	const headParam = encodeURIComponent(`${ref.owner}:${branchName}`);
+	const url = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/pulls?head=${headParam}&state=all&per_page=20`;
+	const json = await githubGetJson(url);
+	if (!Array.isArray(json)) {
+		return null;
 	}
 
-	// Fallback for branches where local naming/casing diverges from PR head.
-	return findPRByHeadBranch(worktreePath, branchName);
+	const candidates: RestPull[] = [];
+	for (const item of json) {
+		const parsed = RestPullSchema.safeParse(item);
+		if (parsed.success) {
+			candidates.push(parsed.data);
+		}
+	}
+	// Prefer the most recent PR when a branch has been reused.
+	candidates.sort((a, b) => b.number - a.number);
+
+	for (const candidate of candidates) {
+		if (await sharesAncestry(worktreePath, candidate.head.sha)) {
+			return buildWorktreePR(ref, candidate);
+		}
+	}
+	return null;
 }
 
 /**
- * Looks up a PR using `gh pr view` (no args), which matches via the branch's
- * tracking ref. Essential for fork PRs that track refs/pull/XXX/head.
+ * Enriches a PR list item with the detail (additions/deletions), review
+ * decision, and check rollup needed for the worktree PR shape.
  */
-async function getPRByBranchTracking(
-	worktreePath: string,
-): Promise<GitHubStatus["pr"]> {
-	try {
-		const { stdout } = await execWithShellEnv(
-			"gh",
-			["pr", "view", "--json", PR_JSON_FIELDS],
-			{ cwd: worktreePath },
-		);
+async function buildWorktreePR(
+	ref: RepoRef,
+	pull: RestPull,
+): Promise<NonNullable<GitHubStatus["pr"]>> {
+	const prBase = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/pulls/${pull.number}`;
+	const [detailJson, reviewsJson, checks] = await Promise.all([
+		githubGetJson(prBase),
+		githubGetJson(`${prBase}/reviews?per_page=100`),
+		fetchCheckItems(ref, pull.head.sha),
+	]);
 
-		const data = parsePRResponse(stdout);
-		if (!data) {
-			return null;
-		}
+	const detail = RestPullDetailSchema.safeParse(detailJson);
+	const additions = detail.success ? (detail.data.additions ?? 0) : 0;
+	const deletions = detail.success ? (detail.data.deletions ?? 0) : 0;
 
-		if (!(await sharesAncestry(worktreePath, data.headRefOid))) {
-			return null;
-		}
-
-		return formatPRData(data);
-	} catch (error) {
-		if (
-			error instanceof Error &&
-			error.message.toLowerCase().includes("no pull requests found")
-		) {
-			return null;
-		}
-		throw error;
-	}
+	return formatWorktreePR(
+		pull,
+		additions,
+		deletions,
+		computeReviewDecision(reviewsJson),
+		checks,
+	);
 }
 
-async function findPRByHeadBranch(
-	worktreePath: string,
-	branchName: string,
-): Promise<GitHubStatus["pr"]> {
-	try {
-		const { stdout } = await execWithShellEnv(
-			"gh",
-			[
-				"pr",
-				"list",
-				"--state",
-				"all",
-				"--search",
-				`head:${branchName}`,
-				"--limit",
-				"20",
-				"--json",
-				PR_JSON_FIELDS,
-			],
-			{ cwd: worktreePath },
-		);
-
-		const candidates = parsePRListResponse(stdout);
-		for (const candidate of candidates) {
-			if (await sharesAncestry(worktreePath, candidate.headRefOid)) {
-				return formatPRData(candidate);
-			}
-		}
-
-		return null;
-	} catch {
-		return null;
-	}
+/**
+ * Builds the worktree PR shape from its REST pieces. Exported for unit tests.
+ */
+export function formatWorktreePR(
+	pull: RestPull,
+	additions: number,
+	deletions: number,
+	reviewDecision: NonNullable<GitHubStatus["pr"]>["reviewDecision"],
+	checks: CheckItem[],
+): NonNullable<GitHubStatus["pr"]> {
+	return {
+		number: pull.number,
+		title: pull.title,
+		url: pull.html_url,
+		state: mapWorktreePRState(pull),
+		mergedAt: pull.merged_at ? new Date(pull.merged_at).getTime() : undefined,
+		additions,
+		deletions,
+		reviewDecision,
+		checksStatus: checksStatusFromItems(checks),
+		checks,
+	};
 }
 
-function parsePRResponse(stdout: string): GHPRResponse | null {
-	const trimmed = stdout.trim();
-	if (!trimmed || trimmed === "null") {
-		return null;
-	}
-
-	let raw: unknown;
-	try {
-		raw = JSON.parse(trimmed);
-	} catch (error) {
-		console.warn(
-			"[GitHub] Failed to parse PR response JSON:",
-			error instanceof Error ? error.message : String(error),
-		);
-		return null;
-	}
-	const result = GHPRResponseSchema.safeParse(raw);
-	if (!result.success) {
-		console.error("[GitHub] PR schema validation failed:", result.error);
-		console.error("[GitHub] Raw data:", JSON.stringify(raw, null, 2));
-		return null;
-	}
-	return result.data;
+function mapWorktreePRState(
+	pull: RestPull,
+): NonNullable<GitHubStatus["pr"]>["state"] {
+	if (pull.merged_at) return "merged";
+	if (pull.state === "closed") return "closed";
+	if (pull.draft) return "draft";
+	return "open";
 }
 
-function parsePRListResponse(stdout: string): GHPRResponse[] {
-	const trimmed = stdout.trim();
-	if (!trimmed || trimmed === "null") {
-		return [];
+/**
+ * Reduces a PR's REST reviews to a gh-equivalent reviewDecision. Takes each
+ * reviewer's latest decisive review (ignoring COMMENTED/PENDING); any
+ * CHANGES_REQUESTED wins, else any APPROVED, else pending. Exported for tests.
+ */
+export function computeReviewDecision(
+	reviewsJson: unknown,
+): NonNullable<GitHubStatus["pr"]>["reviewDecision"] {
+	if (!Array.isArray(reviewsJson)) {
+		return "pending";
 	}
-
-	let raw: unknown;
-	try {
-		raw = JSON.parse(trimmed);
-	} catch (error) {
-		console.warn(
-			"[GitHub] Failed to parse PR list response JSON:",
-			error instanceof Error ? error.message : String(error),
-		);
-		return [];
+	// Reviews arrive chronologically; a later review overwrites an earlier one.
+	const latestByUser = new Map<string, string>();
+	for (const raw of reviewsJson) {
+		const parsed = RestReviewSchema.safeParse(raw);
+		if (!parsed.success) {
+			continue;
+		}
+		const login = parsed.data.user?.login;
+		const state = parsed.data.state;
+		if (!login || state === "COMMENTED" || state === "PENDING") {
+			continue;
+		}
+		latestByUser.set(login, state);
 	}
-
-	if (!Array.isArray(raw)) {
-		return [];
-	}
-
-	const parsed: GHPRResponse[] = [];
-	for (const item of raw) {
-		const result = GHPRResponseSchema.safeParse(item);
-		if (result.success) {
-			parsed.push(result.data);
+	for (const state of latestByUser.values()) {
+		if (state === "CHANGES_REQUESTED") {
+			return "changes_requested";
 		}
 	}
-	return parsed;
+	for (const state of latestByUser.values()) {
+		if (state === "APPROVED") {
+			return "approved";
+		}
+	}
+	return "pending";
 }
 
 /**
  * Returns true if local HEAD and the given commit share ancestry
- * (one is an ancestor of the other, or they are the same commit).
+ * (one is an ancestor of the other, or they are the same commit). Local git
+ * only — no network fallback.
  */
 async function sharesAncestry(
 	worktreePath: string,
@@ -365,102 +669,6 @@ async function sharesAncestry(
 	} catch {
 		return false;
 	}
-}
-
-function formatPRData(data: GHPRResponse): NonNullable<GitHubStatus["pr"]> {
-	return {
-		number: data.number,
-		title: data.title,
-		url: data.url,
-		state: mapPRState(data.state, data.isDraft),
-		mergedAt: data.mergedAt ? new Date(data.mergedAt).getTime() : undefined,
-		additions: data.additions,
-		deletions: data.deletions,
-		reviewDecision: mapReviewDecision(data.reviewDecision),
-		checksStatus: computeChecksStatus(data.statusCheckRollup),
-		checks: parseChecks(data.statusCheckRollup),
-	};
-}
-
-function mapPRState(
-	state: GHPRResponse["state"],
-	isDraft: boolean,
-): NonNullable<GitHubStatus["pr"]>["state"] {
-	if (state === "MERGED") return "merged";
-	if (state === "CLOSED") return "closed";
-	if (isDraft) return "draft";
-	return "open";
-}
-
-function mapReviewDecision(
-	decision: GHPRResponse["reviewDecision"],
-): NonNullable<GitHubStatus["pr"]>["reviewDecision"] {
-	if (decision === "APPROVED") return "approved";
-	if (decision === "CHANGES_REQUESTED") return "changes_requested";
-	return "pending";
-}
-
-function parseChecks(rollup: GHPRResponse["statusCheckRollup"]): CheckItem[] {
-	if (!rollup || rollup.length === 0) {
-		return [];
-	}
-
-	// GitHub returns two shapes: CheckRun (name/detailsUrl/conclusion) and
-	// StatusContext (context/targetUrl/state). Normalize both here.
-	return rollup.map((ctx) => {
-		const name = ctx.name || ctx.context || "Unknown check";
-		const url = ctx.detailsUrl || ctx.targetUrl;
-		const rawStatus = ctx.state || ctx.conclusion;
-
-		let status: CheckItem["status"];
-		if (rawStatus === "SUCCESS") {
-			status = "success";
-		} else if (
-			rawStatus === "FAILURE" ||
-			rawStatus === "ERROR" ||
-			rawStatus === "TIMED_OUT"
-		) {
-			status = "failure";
-		} else if (rawStatus === "SKIPPED" || rawStatus === "NEUTRAL") {
-			status = "skipped";
-		} else if (rawStatus === "CANCELLED") {
-			status = "cancelled";
-		} else {
-			status = "pending";
-		}
-
-		return { name, status, url };
-	});
-}
-
-function computeChecksStatus(
-	rollup: GHCheckContext[] | null,
-): NonNullable<GitHubStatus["pr"]>["checksStatus"] {
-	if (!rollup || rollup.length === 0) {
-		return "none";
-	}
-
-	let hasFailure = false;
-	let hasPending = false;
-
-	for (const ctx of rollup) {
-		const status = ctx.state || ctx.conclusion;
-
-		if (status === "FAILURE" || status === "ERROR" || status === "TIMED_OUT") {
-			hasFailure = true;
-		} else if (
-			status === "PENDING" ||
-			status === "" ||
-			status === null ||
-			status === undefined
-		) {
-			hasPending = true;
-		}
-	}
-
-	if (hasFailure) return "failure";
-	if (hasPending) return "pending";
-	return "success";
 }
 
 // ---------------------------------------------------------------------------
@@ -510,7 +718,13 @@ export type BoardItem = {
 
 export type ActivityEvent = {
 	id: string;
-	kind: "pr-opened" | "pr-merged" | "pr-closed" | "issue-opened" | "issue-closed" | "mail";
+	kind:
+		| "pr-opened"
+		| "pr-merged"
+		| "pr-closed"
+		| "issue-opened"
+		| "issue-closed"
+		| "mail";
 	at: string;
 	title: string;
 	url: string | null;
@@ -532,55 +746,96 @@ export type MailEvent = {
 	subjectLine: string;
 };
 
-// Loose schemas for the two team-wide gh list calls. Kept permissive so a single
-// odd field never sinks the whole fetch — anything unparseable is skipped.
-const GHTeamIssueSchema = z.object({
-	number: z.number(),
-	title: z.string(),
-	url: z.string(),
-	state: z.string(),
-	labels: z.array(z.object({ name: z.string() })).nullish(),
-	assignees: z.array(z.object({ login: z.string() })).nullish(),
-	body: z.string().nullish(),
-	updatedAt: z.string(),
-	closedAt: z.string().nullish(),
-});
-
-const GHTeamPRSchema = z.object({
-	number: z.number(),
-	title: z.string(),
-	url: z.string(),
-	state: z.string(),
-	headRefName: z.string(),
-	body: z.string().nullish(),
-	statusCheckRollup: z.array(GHCheckContextSchema).nullish(),
-	updatedAt: z.string(),
-	mergedAt: z.string().nullish(),
-});
+/**
+ * Maps a REST /issues item to the snapshot issue shape, or null if it's actually
+ * a PR (the /issues endpoint mixes them) or unparseable. Exported for tests.
+ */
+export function mapRestIssueToTeam(
+	raw: unknown,
+): TeamGitHubSnapshot["issues"][number] | null {
+	const parsed = RestIssueSchema.safeParse(raw);
+	if (!parsed.success) {
+		return null;
+	}
+	const data = parsed.data;
+	// The /issues endpoint returns PRs too — skip anything with a pull_request key.
+	if (data.pull_request) {
+		return null;
+	}
+	return {
+		number: data.number,
+		title: data.title,
+		url: data.html_url,
+		state: data.state === "closed" ? "closed" : "open",
+		labels: (data.labels ?? [])
+			.map((l) => (typeof l === "string" ? l : (l.name ?? "")))
+			.filter((n): n is string => n.length > 0),
+		assignees: (data.assignees ?? []).map((a) => a.login),
+		body: data.body ?? "",
+		updatedAt: data.updated_at,
+		closedAt: data.closed_at ?? null,
+	};
+}
 
 /**
- * Fetches an org/repo-wide snapshot of issues + PRs for the team dashboard using
- * two `gh` list calls run with cwd=repoPath.
+ * Maps a REST /pulls item plus its resolved checks status to the snapshot PR
+ * shape, or null if unparseable. Exported for tests.
+ */
+export function mapRestPRToTeam(
+	raw: unknown,
+	checksStatus: TeamGitHubSnapshot["prs"][number]["checksStatus"],
+): TeamGitHubSnapshot["prs"][number] | null {
+	const parsed = RestPullSchema.safeParse(raw);
+	if (!parsed.success) {
+		return null;
+	}
+	const data = parsed.data;
+	return {
+		number: data.number,
+		title: data.title,
+		url: data.html_url,
+		state: normalizeTeamPRState(data.state, data.merged_at ?? null),
+		headRefName: data.head.ref,
+		body: data.body ?? "",
+		checksStatus,
+		updatedAt: data.updated_at,
+		mergedAt: data.merged_at ?? null,
+	};
+}
+
+/**
+ * Fetches an org/repo-wide snapshot of issues + PRs for the team dashboard via
+ * the REST API (all fetches keep-alive over one connection).
  *
- * NEVER throws: `gh` missing, not a repo, not authenticated, or any parse error
- * all degrade to `{ issues: [], prs: [] }`.
+ * NEVER throws: unresolvable remote, no token, or any parse error all degrade to
+ * `{ issues: [], prs: [] }`.
  *
- * This is the transport-side boundary (issue #67 owns rewriting what happens
- * inside it). `fetchTeamGitHubSnapshot` below is the cached, public entry
- * point — keep the cache wrapped around this function rather than folded
- * into it, so the two changes compose.
+ * This is the transport-side boundary (issue #67). `fetchTeamGitHubSnapshot`
+ * below is the cached, public entry point (issue #66) — keep the cache wrapped
+ * around this function rather than folded into it, so the two stay composable.
  */
 async function fetchTeamGitHubSnapshotUncached(
 	repoPath: string,
 ): Promise<TeamGitHubSnapshot> {
+	const started = Date.now();
 	try {
+		const ref = await getRepoRef(repoPath);
+		if (!ref) {
+			return { issues: [], prs: [] };
+		}
 		const [issues, prs] = await Promise.all([
-			fetchTeamIssues(repoPath),
-			fetchTeamPRs(repoPath),
+			fetchTeamIssues(ref),
+			fetchTeamPRs(ref),
 		]);
 		return { issues, prs };
 	} catch {
 		return { issues: [], prs: [] };
+	} finally {
+		if (process.env.PAPYRUS_GH_TIMING) {
+			console.log(
+				`[github-team] fetchTeamGitHubSnapshot(${repoPath}) ${Date.now() - started}ms`,
+			);
+		}
 	}
 }
 
@@ -671,101 +926,64 @@ export async function fetchTeamGitHubSnapshot(
 }
 
 async function fetchTeamIssues(
-	repoPath: string,
+	ref: RepoRef,
 ): Promise<TeamGitHubSnapshot["issues"]> {
-	try {
-		const { stdout } = await execWithShellEnv(
-			"gh",
-			[
-				"issue",
-				"list",
-				"--state",
-				"all",
-				"--limit",
-				"100",
-				"--json",
-				"number,title,url,state,labels,assignees,body,updatedAt,closedAt",
-			],
-			{ cwd: repoPath },
-		);
-
-		const raw: unknown = JSON.parse(stdout.trim() || "[]");
-		if (!Array.isArray(raw)) {
-			return [];
-		}
-
-		const issues: TeamGitHubSnapshot["issues"] = [];
-		for (const item of raw) {
-			const parsed = GHTeamIssueSchema.safeParse(item);
-			if (!parsed.success) {
-				continue;
-			}
-			const data = parsed.data;
-			issues.push({
-				number: data.number,
-				title: data.title,
-				url: data.url,
-				state: data.state.toLowerCase() === "closed" ? "closed" : "open",
-				labels: (data.labels ?? []).map((l) => l.name),
-				assignees: (data.assignees ?? []).map((a) => a.login),
-				body: data.body ?? "",
-				updatedAt: data.updatedAt,
-				closedAt: data.closedAt ?? null,
-			});
-		}
-		return issues;
-	} catch {
+	const url = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/issues?state=all&per_page=100`;
+	const json = await githubGetJson(url);
+	if (!Array.isArray(json)) {
 		return [];
 	}
+	const issues: TeamGitHubSnapshot["issues"] = [];
+	for (const item of json) {
+		const mapped = mapRestIssueToTeam(item);
+		if (mapped) {
+			issues.push(mapped);
+		}
+	}
+	return issues;
 }
 
-async function fetchTeamPRs(
-	repoPath: string,
-): Promise<TeamGitHubSnapshot["prs"]> {
-	try {
-		const { stdout } = await execWithShellEnv(
-			"gh",
-			[
-				"pr",
-				"list",
-				"--state",
-				"all",
-				"--limit",
-				"50",
-				"--json",
-				"number,title,url,state,headRefName,body,statusCheckRollup,updatedAt,mergedAt",
-			],
-			{ cwd: repoPath },
-		);
-
-		const raw: unknown = JSON.parse(stdout.trim() || "[]");
-		if (!Array.isArray(raw)) {
-			return [];
-		}
-
-		const prs: TeamGitHubSnapshot["prs"] = [];
-		for (const item of raw) {
-			const parsed = GHTeamPRSchema.safeParse(item);
-			if (!parsed.success) {
-				continue;
-			}
-			const data = parsed.data;
-			prs.push({
-				number: data.number,
-				title: data.title,
-				url: data.url,
-				state: normalizeTeamPRState(data.state, data.mergedAt ?? null),
-				headRefName: data.headRefName,
-				body: data.body ?? "",
-				checksStatus: computeChecksStatus(data.statusCheckRollup ?? null),
-				updatedAt: data.updatedAt,
-				mergedAt: data.mergedAt ?? null,
-			});
-		}
-		return prs;
-	} catch {
+async function fetchTeamPRs(ref: RepoRef): Promise<TeamGitHubSnapshot["prs"]> {
+	const url = `${ref.apiBase}/repos/${ref.owner}/${ref.repo}/pulls?state=all&per_page=50`;
+	const json = await githubGetJson(url);
+	if (!Array.isArray(json)) {
 		return [];
 	}
+
+	const pulls: RestPull[] = [];
+	for (const item of json) {
+		const parsed = RestPullSchema.safeParse(item);
+		if (parsed.success) {
+			pulls.push(parsed.data);
+		}
+	}
+
+	// Only OPEN PRs render their check status on the board; skip the per-PR
+	// check-runs round trips for closed/merged PRs to stay within the fetch budget.
+	const checksByNumber = new Map<
+		number,
+		TeamGitHubSnapshot["prs"][number]["checksStatus"]
+	>();
+	await Promise.all(
+		pulls
+			.filter((p) => p.state === "open" && !p.merged_at)
+			.map(async (p) => {
+				const items = await fetchCheckItems(ref, p.head.sha);
+				checksByNumber.set(p.number, checksStatusFromItems(items));
+			}),
+	);
+
+	const prs: TeamGitHubSnapshot["prs"] = [];
+	for (const pull of pulls) {
+		const mapped = mapRestPRToTeam(
+			pull,
+			checksByNumber.get(pull.number) ?? "none",
+		);
+		if (mapped) {
+			prs.push(mapped);
+		}
+	}
+	return prs;
 }
 
 function normalizeTeamPRState(

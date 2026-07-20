@@ -2300,8 +2300,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/terminal/terminal.ts": {
-    "mtime": 1784121607.39922,
-    "ast_hash": "8885773fb4a5d424344f5df42e031844",
+    "mtime": 1784574483.9253898,
+    "ast_hash": "5b7a14a92b763185fa4458cb11002bfc",
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/terminal/theme-type.test.ts": {
@@ -3020,7 +3020,7 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routeTree.gen.ts": {
-    "mtime": 1784318175.519631,
+    "mtime": 1784574983.3086686,
     "ast_hash": "e4c424cd6a2f31b8addb329e0c9e24df",
     "semantic_hash": ""
   },
@@ -4940,8 +4940,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/Terminal.tsx": {
-    "mtime": 1784121607.404753,
-    "ast_hash": "2398bb7105477e56b44e36981cefa3be",
+    "mtime": 1784574652.9940293,
+    "ast_hash": "f18f6fb92c2a6636e39b5977be8393d4",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/TerminalSearch/TerminalSearch.tsx": {
@@ -5000,8 +5000,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/components/index.ts": {
-    "mtime": 1784121607.4080892,
-    "ast_hash": "8988d2dff84875fb698dc55f01a577ec",
+    "mtime": 1784574484.0079608,
+    "ast_hash": "6deb083fa5bc73d80b4f467147c77ff1",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/config.ts": {
@@ -5020,8 +5020,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/index.ts": {
-    "mtime": 1784039983.7916172,
-    "ast_hash": "781a7db520e63d324c9689c5f394d9b8",
+    "mtime": 1784574484.0090203,
+    "ast_hash": "f9a504ec22561215d8ab6ed190c2b29d",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/useFileLinkClick.ts": {
@@ -5035,8 +5035,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/useTerminalConnection.ts": {
-    "mtime": 1784121607.4080892,
-    "ast_hash": "6e4e17b9a01ca6d26644a0fe037854de",
+    "mtime": 1784574484.0111644,
+    "ast_hash": "d87909181f5698a123b3d8f999f43375",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/useTerminalCwd.ts": {
@@ -5070,8 +5070,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/useTerminalStream.ts": {
-    "mtime": 1784039983.7916172,
-    "ast_hash": "13c2cc0d369a5a6f428e9d93264ebd4b",
+    "mtime": 1784574484.0111644,
+    "ast_hash": "971adb38bbc381f54b8b5a20b6e3d4e9",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/index.ts": {
@@ -6230,8 +6230,8 @@
     "semantic_hash": ""
   },
   "apps/server/src/routers/terminal.ts": {
-    "mtime": 1784121607.4138281,
-    "ast_hash": "e47b68340f0dd2a3428f5e6200548d92",
+    "mtime": 1784574484.013173,
+    "ast_hash": "50c96594d6553ff8f936e418d4555242",
     "semantic_hash": ""
   },
   "apps/server/src/routers/ui-state.ts": {
@@ -6310,8 +6310,8 @@
     "semantic_hash": ""
   },
   "apps/webui/src/trpc-client-web.ts": {
-    "mtime": 1784039984.2833526,
-    "ast_hash": "e966c56b851bd52143b8e7913de2768a",
+    "mtime": 1784574484.0151803,
+    "ast_hash": "bba5b2f969573c555959bd249c1ab4e8",
     "semantic_hash": ""
   },
   "apps/webui/src/viewport-fix.ts": {
@@ -7605,8 +7605,8 @@
     "semantic_hash": ""
   },
   "packages/server-core/src/terminal-host/pty-subprocess.ts": {
-    "mtime": 1784039984.5445652,
-    "ast_hash": "64e28327e5e9d23c938e6135ba6f8fd3",
+    "mtime": 1784574484.0187762,
+    "ast_hash": "8f699873c345d48fa6366ac35dc4008e",
     "semantic_hash": ""
   },
   "packages/server-core/src/terminal-host/session-lifecycle.test.ts": {
@@ -8825,13 +8825,13 @@
     "semantic_hash": ""
   },
   "packages/server-core/src/github-team.test.ts": {
-    "mtime": 1784318163.5133176,
-    "ast_hash": "c839917184736d53e16ee4f9e599fada",
+    "mtime": 1784580386.7822628,
+    "ast_hash": "23c4a0f2d1c17d2ac62f6264abecba9c",
     "semantic_hash": ""
   },
   "packages/server-core/src/github-team.ts": {
-    "mtime": 1784318163.5133176,
-    "ast_hash": "cdb1dab9cb70b061f442a25ef36fe80f",
+    "mtime": 1784580203.823771,
+    "ast_hash": "69fc3fa75c207e06e271ba3f33bc6324",
     "semantic_hash": ""
   },
   "packages/server-core/src/mail-events.test.ts": {
@@ -8932,6 +8932,51 @@
   "docs/tickets/terminal-native-feel.md": {
     "mtime": 1784562874.7738729,
     "ast_hash": "1aae9fff89807696fa961e07085cfe86",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/components/TerminalStatusBar/TerminalStatusBar.tsx": {
+    "mtime": 1784574484.0021927,
+    "ast_hash": "fee501d008248c089ebd5f0b2f3f2e2a",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/components/TerminalStatusBar/WaitingOnYouBar.tsx": {
+    "mtime": 1784574484.0042007,
+    "ast_hash": "758e18e4a84c5f8bf3e015e8d99ea6f3",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/components/TerminalStatusBar/index.ts": {
+    "mtime": 1784574484.0059526,
+    "ast_hash": "a03836b370e17c504665bc808e9ed10b",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/latency-tracker.test.ts": {
+    "mtime": 1784574484.0090203,
+    "ast_hash": "438eaeabfc640c6dca223e731d0a006d",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/latency-tracker.ts": {
+    "mtime": 1784574484.0102446,
+    "ast_hash": "0a2bd228a8ea53e8bcc32da45aeb44aa",
+    "semantic_hash": ""
+  },
+  "apps/desktop/src/renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/Terminal/hooks/useTerminalLatency.ts": {
+    "mtime": 1784574484.0111644,
+    "ast_hash": "c799e9c5bf64bf2ca7a7923b5807ea31",
+    "semantic_hash": ""
+  },
+  "packages/server-core/scripts/measure-pty-echo-latency.ts": {
+    "mtime": 1784574484.0151803,
+    "ast_hash": "accc19d6135876308a4ea2c81bcac38d",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/terminal-host/output-coalescer.test.ts": {
+    "mtime": 1784574484.0171876,
+    "ast_hash": "1cccc752696ab6f591020c3feb55c618",
+    "semantic_hash": ""
+  },
+  "packages/server-core/src/terminal-host/output-coalescer.ts": {
+    "mtime": 1784574484.017727,
+    "ast_hash": "de260d8d6d2f0b80df3d98ee10cd1df4",
     "semantic_hash": ""
   }
 }

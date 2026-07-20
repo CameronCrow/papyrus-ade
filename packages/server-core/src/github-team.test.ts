@@ -1,17 +1,24 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import {
 	type AgentRef,
-	type MailEvent,
-	type TeamGitHubSnapshot,
+	checksStatusFromItems,
 	clearTeamGitHubSnapshotCache,
+	computeReviewDecision,
 	deriveActivityFeed,
 	deriveWorkBoard,
 	fetchTeamGitHubSnapshot,
+	formatWorktreePR,
+	type MailEvent,
+	mapRestIssueToTeam,
+	mapRestPRToTeam,
+	parseRepoRef,
 	refreshTeamGitHubSnapshotCache,
+	restChecksToCheckItems,
 	seedTeamGitHubSnapshotCacheForTest,
+	type TeamGitHubSnapshot,
 } from "./github-team";
 
 const SNAPSHOT_CACHE_TTL_MS = 150_000;
@@ -65,7 +72,13 @@ describe("deriveWorkBoard", () => {
 	it("correlation (a): open PR headRefName encodes the issue number", () => {
 		const snap: TeamGitHubSnapshot = {
 			issues: [issue({ number: 51 })],
-			prs: [pr({ number: 9, state: "open", headRefName: "feat/issue-51-team-dashboard" })],
+			prs: [
+				pr({
+					number: 9,
+					state: "open",
+					headRefName: "feat/issue-51-team-dashboard",
+				}),
+			],
 		};
 		const board = deriveWorkBoard(snap, []);
 		expect(board.doing.map((i) => i.number)).toEqual([51]);
@@ -77,8 +90,18 @@ describe("deriveWorkBoard", () => {
 		const snap: TeamGitHubSnapshot = {
 			issues: [issue({ number: 42 }), issue({ number: 7 })],
 			prs: [
-				pr({ number: 3, state: "open", headRefName: "misc", body: "Closes #42" }),
-				pr({ number: 4, state: "open", headRefName: "misc2", title: "Fixes #7 finally" }),
+				pr({
+					number: 3,
+					state: "open",
+					headRefName: "misc",
+					body: "Closes #42",
+				}),
+				pr({
+					number: 4,
+					state: "open",
+					headRefName: "misc2",
+					title: "Fixes #7 finally",
+				}),
 			],
 		};
 		const board = deriveWorkBoard(snap, []);
@@ -90,7 +113,9 @@ describe("deriveWorkBoard", () => {
 	it("does not false-match #51 against #510", () => {
 		const snap: TeamGitHubSnapshot = {
 			issues: [issue({ number: 51 })],
-			prs: [pr({ number: 3, state: "open", headRefName: "misc", body: "see #510" })],
+			prs: [
+				pr({ number: 3, state: "open", headRefName: "misc", body: "see #510" }),
+			],
 		};
 		const board = deriveWorkBoard(snap, []);
 		expect(board.todo.map((i) => i.number)).toEqual([51]);
@@ -113,7 +138,11 @@ describe("deriveWorkBoard", () => {
 			prs: [],
 		};
 		const agents: AgentRef[] = [
-			{ workspaceId: "ws1", name: "Ada", branch: "feat/issue-51-team-dashboard" },
+			{
+				workspaceId: "ws1",
+				name: "Ada",
+				branch: "feat/issue-51-team-dashboard",
+			},
 			{ workspaceId: "ws2", name: "Bob", branch: null },
 		];
 		const board = deriveWorkBoard(snap, agents);
@@ -148,9 +177,21 @@ describe("deriveWorkBoard", () => {
 	it("sorts each column by updatedAt desc", () => {
 		const snap: TeamGitHubSnapshot = {
 			issues: [
-				issue({ number: 1, state: "closed", updatedAt: "2026-01-01T00:00:00Z" }),
-				issue({ number: 2, state: "closed", updatedAt: "2026-03-01T00:00:00Z" }),
-				issue({ number: 3, state: "closed", updatedAt: "2026-02-01T00:00:00Z" }),
+				issue({
+					number: 1,
+					state: "closed",
+					updatedAt: "2026-01-01T00:00:00Z",
+				}),
+				issue({
+					number: 2,
+					state: "closed",
+					updatedAt: "2026-03-01T00:00:00Z",
+				}),
+				issue({
+					number: 3,
+					state: "closed",
+					updatedAt: "2026-02-01T00:00:00Z",
+				}),
 			],
 			prs: [],
 		};
@@ -381,5 +422,368 @@ describe("fetchTeamGitHubSnapshot cache (issue #66)", () => {
 		// empty.
 		const stillCached = await fetchTeamGitHubSnapshot("repo-e");
 		expect(stillCached).toEqual(seeded);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// REST -> shape mapping (issue #67)
+// ---------------------------------------------------------------------------
+
+describe("parseRepoRef", () => {
+	it("parses https remotes", () => {
+		expect(
+			parseRepoRef("https://github.com/CameronCrow/papyrus-ade.git"),
+		).toEqual({
+			owner: "CameronCrow",
+			repo: "papyrus-ade",
+			apiBase: "https://api.github.com",
+			htmlUrl: "https://github.com/CameronCrow/papyrus-ade",
+		});
+	});
+
+	it("parses scp-style ssh remotes", () => {
+		expect(parseRepoRef("git@github.com:CameronCrow/papyrus-ade.git")).toEqual({
+			owner: "CameronCrow",
+			repo: "papyrus-ade",
+			apiBase: "https://api.github.com",
+			htmlUrl: "https://github.com/CameronCrow/papyrus-ade",
+		});
+	});
+
+	it("parses ssh:// remotes without a .git suffix", () => {
+		expect(parseRepoRef("ssh://git@github.com/acme/widgets")).toEqual({
+			owner: "acme",
+			repo: "widgets",
+			apiBase: "https://api.github.com",
+			htmlUrl: "https://github.com/acme/widgets",
+		});
+	});
+
+	it("maps a GitHub Enterprise host to /api/v3", () => {
+		const ref = parseRepoRef("https://ghe.corp.example/acme/widgets.git");
+		expect(ref?.apiBase).toBe("https://ghe.corp.example/api/v3");
+		expect(ref?.htmlUrl).toBe("https://ghe.corp.example/acme/widgets");
+	});
+
+	it("returns null for garbage", () => {
+		expect(parseRepoRef("")).toBeNull();
+		expect(parseRepoRef("not-a-url")).toBeNull();
+	});
+});
+
+describe("restChecksToCheckItems + checksStatusFromItems", () => {
+	it("maps a passing check-run to success", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{
+						name: "build",
+						status: "completed",
+						conclusion: "success",
+						details_url: "https://ci/build",
+					},
+				],
+			},
+			null,
+		);
+		expect(items).toEqual([
+			{ name: "build", status: "success", url: "https://ci/build" },
+		]);
+		expect(checksStatusFromItems(items)).toBe("success");
+	});
+
+	it("maps a failing check-run to failure and rolls up to failure", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{ name: "build", status: "completed", conclusion: "success" },
+					{ name: "test", status: "completed", conclusion: "failure" },
+				],
+			},
+			null,
+		);
+		expect(items.map((i) => i.status)).toEqual(["success", "failure"]);
+		expect(checksStatusFromItems(items)).toBe("failure");
+	});
+
+	it("maps an in-progress check-run to pending and rolls up to pending", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{ name: "build", status: "completed", conclusion: "success" },
+					{ name: "deploy", status: "in_progress", conclusion: null },
+				],
+			},
+			null,
+		);
+		expect(items.map((i) => i.status)).toEqual(["success", "pending"]);
+		expect(checksStatusFromItems(items)).toBe("pending");
+	});
+
+	it("failure outranks pending in the rollup", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{ name: "a", status: "in_progress" },
+					{ name: "b", status: "completed", conclusion: "failure" },
+				],
+			},
+			null,
+		);
+		expect(checksStatusFromItems(items)).toBe("failure");
+	});
+
+	it("skipped/cancelled do not count as failure or pending", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{ name: "a", status: "completed", conclusion: "skipped" },
+					{ name: "b", status: "completed", conclusion: "cancelled" },
+					{ name: "c", status: "completed", conclusion: "success" },
+				],
+			},
+			null,
+		);
+		expect(checksStatusFromItems(items)).toBe("success");
+	});
+
+	it("merges legacy commit statuses alongside check-runs", () => {
+		const items = restChecksToCheckItems(
+			{
+				check_runs: [
+					{ name: "build", status: "completed", conclusion: "success" },
+				],
+			},
+			{
+				statuses: [
+					{
+						context: "ci/legacy",
+						state: "pending",
+						target_url: "https://ci/legacy",
+					},
+				],
+			},
+		);
+		expect(items).toContainEqual({
+			name: "ci/legacy",
+			status: "pending",
+			url: "https://ci/legacy",
+		});
+		expect(checksStatusFromItems(items)).toBe("pending");
+	});
+
+	it("returns none for no checks and tolerates garbage input", () => {
+		expect(checksStatusFromItems(restChecksToCheckItems(null, null))).toBe(
+			"none",
+		);
+		expect(checksStatusFromItems(restChecksToCheckItems({}, {}))).toBe("none");
+	});
+});
+
+describe("computeReviewDecision", () => {
+	it("changes_requested wins over an earlier approval by the same user", () => {
+		expect(
+			computeReviewDecision([
+				{ user: { login: "ada" }, state: "APPROVED" },
+				{ user: { login: "ada" }, state: "CHANGES_REQUESTED" },
+			]),
+		).toBe("changes_requested");
+	});
+
+	it("a superseding approval clears an earlier change request", () => {
+		expect(
+			computeReviewDecision([
+				{ user: { login: "ada" }, state: "CHANGES_REQUESTED" },
+				{ user: { login: "ada" }, state: "APPROVED" },
+			]),
+		).toBe("approved");
+	});
+
+	it("ignores COMMENTED reviews and defaults to pending", () => {
+		expect(
+			computeReviewDecision([{ user: { login: "ada" }, state: "COMMENTED" }]),
+		).toBe("pending");
+		expect(computeReviewDecision([])).toBe("pending");
+		expect(computeReviewDecision(null)).toBe("pending");
+	});
+});
+
+describe("mapRestIssueToTeam", () => {
+	it("maps a REST issue to the snapshot shape", () => {
+		expect(
+			mapRestIssueToTeam({
+				number: 42,
+				title: "Do the thing",
+				html_url: "https://github.com/o/r/issues/42",
+				state: "open",
+				labels: [{ name: "bug" }, "urgent"],
+				assignees: [{ login: "ada" }],
+				body: "details",
+				updated_at: "2026-01-02T00:00:00Z",
+				closed_at: null,
+			}),
+		).toEqual({
+			number: 42,
+			title: "Do the thing",
+			url: "https://github.com/o/r/issues/42",
+			state: "open",
+			labels: ["bug", "urgent"],
+			assignees: ["ada"],
+			body: "details",
+			updatedAt: "2026-01-02T00:00:00Z",
+			closedAt: null,
+		});
+	});
+
+	it("skips PRs that the /issues endpoint mixes in", () => {
+		expect(
+			mapRestIssueToTeam({
+				number: 9,
+				title: "a pr",
+				html_url: "https://github.com/o/r/pull/9",
+				state: "open",
+				updated_at: "2026-01-02T00:00:00Z",
+				pull_request: { url: "https://api/pulls/9" },
+			}),
+		).toBeNull();
+	});
+
+	it("defaults null body and missing labels/assignees", () => {
+		const mapped = mapRestIssueToTeam({
+			number: 5,
+			title: "bare",
+			html_url: "u",
+			state: "closed",
+			body: null,
+			updated_at: "2026-01-02T00:00:00Z",
+			closed_at: "2026-01-03T00:00:00Z",
+		});
+		expect(mapped).toMatchObject({
+			state: "closed",
+			labels: [],
+			assignees: [],
+			body: "",
+			closedAt: "2026-01-03T00:00:00Z",
+		});
+	});
+});
+
+describe("mapRestPRToTeam", () => {
+	it("maps an open REST PR with its resolved checks status", () => {
+		expect(
+			mapRestPRToTeam(
+				{
+					number: 12,
+					title: "Add feature",
+					html_url: "https://github.com/o/r/pull/12",
+					state: "open",
+					draft: false,
+					merged_at: null,
+					body: "Closes #42",
+					updated_at: "2026-01-04T00:00:00Z",
+					head: { ref: "feat/thing", sha: "abc123" },
+				},
+				"pending",
+			),
+		).toEqual({
+			number: 12,
+			title: "Add feature",
+			url: "https://github.com/o/r/pull/12",
+			state: "open",
+			headRefName: "feat/thing",
+			body: "Closes #42",
+			checksStatus: "pending",
+			updatedAt: "2026-01-04T00:00:00Z",
+			mergedAt: null,
+		});
+	});
+
+	it("normalizes closed+merged_at to merged", () => {
+		const mapped = mapRestPRToTeam(
+			{
+				number: 13,
+				title: "Merged one",
+				html_url: "u",
+				state: "closed",
+				merged_at: "2026-01-06T00:00:00Z",
+				updated_at: "2026-01-06T00:00:00Z",
+				head: { ref: "b", sha: "s" },
+			},
+			"none",
+		);
+		expect(mapped?.state).toBe("merged");
+		expect(mapped?.mergedAt).toBe("2026-01-06T00:00:00Z");
+	});
+
+	it("maps closed-unmerged to closed", () => {
+		const mapped = mapRestPRToTeam(
+			{
+				number: 14,
+				title: "Closed one",
+				html_url: "u",
+				state: "closed",
+				merged_at: null,
+				updated_at: "2026-01-06T00:00:00Z",
+				head: { ref: "b", sha: "s" },
+			},
+			"none",
+		);
+		expect(mapped?.state).toBe("closed");
+	});
+});
+
+describe("formatWorktreePR", () => {
+	const basePull = {
+		number: 7,
+		title: "WIP",
+		html_url: "https://github.com/o/r/pull/7",
+		state: "open",
+		draft: false,
+		merged_at: null,
+		body: "",
+		updated_at: "2026-01-04T00:00:00Z",
+		head: { ref: "feat/x", sha: "deadbeef" },
+	};
+
+	it("builds the worktree PR shape from REST pieces", () => {
+		const pr = formatWorktreePR(basePull, 10, 3, "approved", [
+			{ name: "build", status: "success" },
+		]);
+		expect(pr).toEqual({
+			number: 7,
+			title: "WIP",
+			url: "https://github.com/o/r/pull/7",
+			state: "open",
+			mergedAt: undefined,
+			additions: 10,
+			deletions: 3,
+			reviewDecision: "approved",
+			checksStatus: "success",
+			checks: [{ name: "build", status: "success" }],
+		});
+	});
+
+	it("maps draft PRs to state draft", () => {
+		const pr = formatWorktreePR(
+			{ ...basePull, draft: true },
+			0,
+			0,
+			"pending",
+			[],
+		);
+		expect(pr.state).toBe("draft");
+		expect(pr.checksStatus).toBe("none");
+	});
+
+	it("maps merged PRs to state merged with a numeric mergedAt", () => {
+		const pr = formatWorktreePR(
+			{ ...basePull, state: "closed", merged_at: "2026-01-06T00:00:00Z" },
+			0,
+			0,
+			"approved",
+			[],
+		);
+		expect(pr.state).toBe("merged");
+		expect(pr.mergedAt).toBe(Date.parse("2026-01-06T00:00:00Z"));
 	});
 });
