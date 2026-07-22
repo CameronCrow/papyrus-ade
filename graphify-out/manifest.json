@@ -1900,8 +1900,8 @@
     "semantic_hash": ""
   },
   ".claude/settings.json": {
-    "mtime": 1784746108.2009075,
-    "ast_hash": "b498f6a09bd3bdbc85d16b565f4414ba",
+    "mtime": 1784760833.6662598,
+    "ast_hash": "162a230ad9b384a5df1b725d468052ce",
     "semantic_hash": ""
   },
   ".claude/settings.local.json": {
@@ -8977,6 +8977,11 @@
   "packages/server-core/src/terminal-host/output-coalescer.ts": {
     "mtime": 1784574484.017727,
     "ast_hash": "de260d8d6d2f0b80df3d98ee10cd1df4",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/workforce-plugin-fetch.sh": {
+    "mtime": 1784760819.5855515,
+    "ast_hash": "63497d924d2d60d67deada830650884f",
     "semantic_hash": ""
   }
 }
