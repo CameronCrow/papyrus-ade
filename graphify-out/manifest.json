@@ -1900,8 +1900,8 @@
     "semantic_hash": ""
   },
   ".claude/settings.json": {
-    "mtime": 1784121607.3952103,
-    "ast_hash": "b4357e3020eaadb51552966135eff0fe",
+    "mtime": 1784746108.2009075,
+    "ast_hash": "b498f6a09bd3bdbc85d16b565f4414ba",
     "semantic_hash": ""
   },
   ".claude/settings.local.json": {
@@ -8825,12 +8825,12 @@
     "semantic_hash": ""
   },
   "packages/server-core/src/github-team.test.ts": {
-    "mtime": 1784580386.7822628,
-    "ast_hash": "23c4a0f2d1c17d2ac62f6264abecba9c",
+    "mtime": 1784581670.0041027,
+    "ast_hash": "30f8ca540b17f9368195b97685fc619d",
     "semantic_hash": ""
   },
   "packages/server-core/src/github-team.ts": {
-    "mtime": 1784580203.823771,
+    "mtime": 1784581670.0041027,
     "ast_hash": "69fc3fa75c207e06e271ba3f33bc6324",
     "semantic_hash": ""
   },
@@ -8845,8 +8845,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/lib/trpc/routers/team-dashboard.ts": {
-    "mtime": 1784318163.4747868,
-    "ast_hash": "7c7638ba669b8135523f674656087f09",
+    "mtime": 1784581108.2543547,
+    "ast_hash": "e658f13c4bb8d744d9c6470b24d63eaf",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/ActivityRail.tsx": {
@@ -8855,8 +8855,8 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/AgentCard.tsx": {
-    "mtime": 1784318163.4791844,
-    "ast_hash": "d040104957010474401026dfcb59ccda",
+    "mtime": 1784581108.2543547,
+    "ast_hash": "d02822ef664664b88ae2a6b1da692b50",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/AgentStatusBadge.tsx": {
@@ -8875,13 +8875,13 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/RosterHero.tsx": {
-    "mtime": 1784318163.4815347,
-    "ast_hash": "9755a7e48c89fba441324634d074e760",
+    "mtime": 1784581108.2563608,
+    "ast_hash": "79bc5a3e966c0e0346195d1e434d4862",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/TeamDashboard.tsx": {
-    "mtime": 1784318163.4825292,
-    "ast_hash": "38ebc7264502f366e76187de81ce54dd",
+    "mtime": 1784581108.2563608,
+    "ast_hash": "14936212546461432521a7284b0c8e48",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/WorkBoard.tsx": {
@@ -8895,28 +8895,28 @@
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/types.ts": {
-    "mtime": 1784318163.484535,
-    "ast_hash": "d582af7bcf7822d1a8aedb471249f7ab",
+    "mtime": 1784581108.2583666,
+    "ast_hash": "a0c500d0c74873f50fe7fa646ec3ad9e",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/-components/team-dashboard/useTeamDashboard.ts": {
-    "mtime": 1784318163.485529,
-    "ast_hash": "05e1ed251f135e7b8488a0cd6663e6a4",
+    "mtime": 1784581108.2583666,
+    "ast_hash": "11e9a19dfb8ae66f58422432f0fc58f6",
     "semantic_hash": ""
   },
   "apps/server/src/routers/team-dashboard.ts": {
-    "mtime": 1784318163.4885335,
-    "ast_hash": "5b4197ce0c60d0b41d815b1dffc2d5c7",
+    "mtime": 1784581108.260373,
+    "ast_hash": "95a4dbb15ed1f7856a2e97bb56a266da",
     "semantic_hash": ""
   },
   "packages/server-core/src/team-dashboard.test.ts": {
-    "mtime": 1784318163.5133176,
-    "ast_hash": "e20479cdc37cfbbf0ddbc06f48cc8113",
+    "mtime": 1784581108.260373,
+    "ast_hash": "5bf671dcdd28779469a6414d839a22c2",
     "semantic_hash": ""
   },
   "packages/server-core/src/team-dashboard.ts": {
-    "mtime": 1784318163.5133176,
-    "ast_hash": "5298b08b01a1b4dbe3a9584414fb9f5b",
+    "mtime": 1784581108.2623794,
+    "ast_hash": "17fd65d70c70f3017a3b66625b47bd52",
     "semantic_hash": ""
   },
   "apps/desktop/src/renderer/routes/_authenticated/_dashboard/project/$projectId/CreateAgentWizard.tsx": {
@@ -8970,8 +8970,8 @@
     "semantic_hash": ""
   },
   "packages/server-core/src/terminal-host/output-coalescer.test.ts": {
-    "mtime": 1784574484.0171876,
-    "ast_hash": "1cccc752696ab6f591020c3feb55c618",
+    "mtime": 1784581110.8029287,
+    "ast_hash": "0d71b804ec42b5e1fb3e8353325cdae1",
     "semantic_hash": ""
   },
   "packages/server-core/src/terminal-host/output-coalescer.ts": {
