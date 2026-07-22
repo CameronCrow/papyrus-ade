@@ -1,38 +1,25 @@
 #!/bin/bash
-# Links Cameron's personal skills/agents from github.com/cameroncrow/workforce
-# into ~/.claude/skills and ~/.claude/agents for this remote session — the
-# web/mobile equivalent of the symlink he keeps on his PC.
-set -euo pipefail
+# SessionStart hook (per-repo STUB -- identical in every repo).
+#
+# In a cloud/remote session it fetches the workforce marketplace (which is where
+# the real logic + the plugin ledger live) and runs its canonical bootstrap, so
+# this sandbox gets Cameron's whole skill/plugin set. Keeping the logic in
+# workforce means this stub almost never changes -- update the ledger or the
+# bootstrap there and every repo picks it up on its next cloud session.
+#
+# Local machines skip this entirely (they install skills via the workforce
+# junction -- see workforce/INSTALL.md). Do not put repo-specific logic here;
+# this file is deployed verbatim by workforce/plugins/cloud/deploy-cloud-hooks.py.
+set -uo pipefail
 
-if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
-  exit 0
-fi
+[ -n "${CLAUDE_CODE_REMOTE:-}" ] || exit 0
+command -v claude >/dev/null 2>&1 || { echo "[cloud-bootstrap] no claude CLI; skip"; exit 0; }
 
-WORKFORCE_DIR="$HOME/.cache/workforce"
-WORKFORCE_URL="https://github.com/cameroncrow/workforce.git"
+claude plugin marketplace add CameronCrow/workforce --scope user >/dev/null 2>&1 || true
 
-if [ -d "$WORKFORCE_DIR/.git" ]; then
-  git -C "$WORKFORCE_DIR" fetch --depth 1 origin main
-  git -C "$WORKFORCE_DIR" reset --hard FETCH_HEAD
+BOOT="$HOME/.claude/plugins/marketplaces/workforce/plugins/cloud/bootstrap.sh"
+if [ -f "$BOOT" ]; then
+  bash "$BOOT" || true
 else
-  rm -rf "$WORKFORCE_DIR"
-  git clone --depth 1 --branch main "$WORKFORCE_URL" "$WORKFORCE_DIR"
+  echo "[cloud-bootstrap] bootstrap.sh not found after marketplace add -- workforce fetch failed?"
 fi
-
-mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents"
-
-if [ -d "$WORKFORCE_DIR/skills" ]; then
-  for dir in "$WORKFORCE_DIR"/skills/*/; do
-    [ -d "$dir" ] || continue
-    ln -sfn "${dir%/}" "$HOME/.claude/skills/$(basename "$dir")"
-  done
-fi
-
-if [ -d "$WORKFORCE_DIR/agents" ]; then
-  for dir in "$WORKFORCE_DIR"/agents/*/; do
-    [ -d "$dir" ] || continue
-    ln -sfn "${dir%/}" "$HOME/.claude/agents/$(basename "$dir")"
-  done
-fi
-
-echo "workforce: linked $(find "$WORKFORCE_DIR/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l) skills and $(find "$WORKFORCE_DIR/agents" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l) agent departments from $WORKFORCE_URL"
