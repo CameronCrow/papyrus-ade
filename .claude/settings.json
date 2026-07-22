@@ -10,5 +10,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "workforce": {
+      "source": {
+        "source": "github",
+        "repo": "CameronCrow/workforce"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "workforce@workforce": true
   }
 }
